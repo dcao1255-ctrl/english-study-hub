@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="覆盖中考、高考、考研和雅思的英语学习资料与备考路径。" />
+    <title>逐光英语 Study Hub</title>
+    <link rel="stylesheet" href="./assets/css/site.css" />
+  </head>
+  <body>
+    <div id="site-header"></div>
+
+    <main>
+      <section class="home-hero" aria-labelledby="home-title">
+        <div class="hero-shade" aria-hidden="true"></div>
+        <div class="container hero-content">
+          <p class="kicker light">ENGLISH STUDY HUB · 全阶段备考</p>
+          <h1 id="home-title">中考到雅思的<br />英语学习资料</h1>
+          <p>按考试阶段整理能力路径、核心资料和官方入口，建立可以持续更新的英语学习系统。</p>
+          <a class="button button-yellow" href="#exam-paths">选择备考模块</a>
+        </div>
+      </section>
+
+      <section class="section" id="exam-paths">
+        <div class="container">
+          <div class="section-heading">
+            <div>
+              <p class="kicker">PUBLIC LEARNING PATHS · 公开学习区</p>
+              <h2>选择当前备考阶段</h2>
+            </div>
+            <p class="section-note">公共资料面向所有访问者开放</p>
+          </div>
+          <div class="module-grid" id="module-grid" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <section class="section section-blue">
+        <div class="container pathway-band">
+          <div>
+            <p class="kicker light">LEARNING SYSTEM · 学习主线</p>
+            <h2>资料不是终点，复盘才形成能力</h2>
+          </div>
+          <ol class="process-list">
+            <li><span>01</span><strong>确认目标</strong><small>考试、时间与目标水平</small></li>
+            <li><span>02</span><strong>定位弱项</strong><small>用真实任务找到失分来源</small></li>
+            <li><span>03</span><strong>专项训练</strong><small>围绕错误类型安排练习</small></li>
+            <li><span>04</span><strong>回到实战</strong><small>定期用完整任务校准</small></li>
+          </ol>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="container public-private-layout">
+          <div class="public-copy">
+            <p class="kicker">STUDENT SPACE · 私人学习档案</p>
+            <h2>每位学生拥有独立档案</h2>
+            <p>诊断记录、错题复盘、重点笔记和阶段计划通过登录后读取，不写入公开网页，也不进入 GitHub 仓库。</p>
+            <a class="button button-outline" href="./student/">进入个人空间</a>
+          </div>
+          <div class="privacy-diagram" aria-label="学生隐私数据流">
+            <div><span>公开站点</span><strong>GitHub Pages</strong></div>
+            <b aria-hidden="true">+</b>
+            <div><span>身份与档案</span><strong>Supabase</strong></div>
+            <b aria-hidden="true">=</b>
+            <div class="result"><span>登录后</span><strong>仅查看本人档案</strong></div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div id="site-footer"></div>
+    <noscript><p class="noscript">请启用 JavaScript 以查看学习模块。</p></noscript>
+    <script src="./assets/js/site-shell.js"></script>
+    <script src="./assets/js/module-data.js"></script>
+    <script src="./assets/js/home.js"></script>
+  </body>
+</html>
