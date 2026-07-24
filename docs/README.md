@@ -4,7 +4,6 @@
 
 为中学以上水平的英语学习者独家定制的英语水平提升火箭加速包。
 
-上传 GitHub Pages 的快速步骤见 [`GITHUB-PAGES.md`](./GITHUB-PAGES.md)。
 
 ## 关于逐光英语
 
