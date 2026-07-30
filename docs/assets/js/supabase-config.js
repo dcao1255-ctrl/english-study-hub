@@ -1,5 +1,5 @@
 window.STUDY_HUB_CONFIG = {
-  SUPABASE_URL: "https://你的项目编号.supabase.co",
-  SUPABASE_ANON_KEY: "你的 publishable 或 anon key",
+  SUPABASE_URL: "https://zxqwsteefbuxkjazzfah.supabase.co",
+  SUPABASE_ANON_KEY: "sb_publishable_fR99bbda-i8c2hfFIBSD2A_JrhnhoMV",
   USERNAME_DOMAIN: "students.example.com"
 };
