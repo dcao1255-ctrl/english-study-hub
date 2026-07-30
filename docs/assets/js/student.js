@@ -162,6 +162,32 @@
     }).join("");
   }
 
+  function renderLessonEntries(lessons) {
+    return lessons.map((lesson, lessonIndex) => {
+      const sources = asArray(lesson.sources);
+      const dateContent = `${escapeHtml(lesson.date)}<small>${escapeHtml(lesson.label)}</small>`;
+      const dateBlock = sources.length
+        ? `<button class="lesson-date workspace-source-trigger" type="button" data-source-kind="lesson" data-source-index="${lessonIndex}" data-source-item="0" aria-label="查看 ${escapeHtml(lesson.date)} 课件">${dateContent}<b>点击查看课件 →</b></button>`
+        : `<div class="lesson-date">${dateContent}</div>`;
+
+      return `
+        <article class="lesson-entry" data-lesson-index="${lessonIndex}">
+          ${dateBlock}
+          <div class="lesson-copy">
+            <h3>${escapeHtml(lesson.title)}</h3>
+            <p>${escapeHtml(lesson.summary)}</p>
+            ${sources.length ? `
+              <div class="lesson-material-actions" aria-label="${escapeHtml(lesson.date)} 课程资料">
+                ${sources.map((source, sourceIndex) => `
+                  <button class="workspace-source-trigger" type="button" data-source-kind="lesson" data-source-index="${lessonIndex}" data-source-item="${sourceIndex}">
+                    ${escapeHtml(source.button_label || source.label || `资料 ${sourceIndex + 1}`)} →
+                  </button>`).join("")}
+              </div>` : ""}
+          </div>
+        </article>`;
+    }).join("");
+  }
+
   function renderProfile(profile) {
     currentProfile = profile;
     const displayName = escapeHtml(profile.display_name || "同学");
@@ -222,7 +248,7 @@
             <p class="kicker light">LESSON LOG · 课程记录</p>
             <h2>课堂记录与阶段变化</h2>
             <div class="lesson-timeline">
-              ${lessons.map((lesson) => `<article class="lesson-entry"><div class="lesson-date">${escapeHtml(lesson.date)}<small>${escapeHtml(lesson.label)}</small></div><div class="lesson-copy"><h3>${escapeHtml(lesson.title)}</h3><p>${escapeHtml(lesson.summary)}</p></div></article>`).join("")}
+              ${renderLessonEntries(lessons)}
             </div>
           </div>
         </section>
@@ -230,7 +256,7 @@
         <section class="section workspace-section" id="learning-workspace">
           <div class="container">
             <div class="workspace-heading">
-              <div><p class="kicker">LEARNING DESK · 学习工作台</p><h2>先回到原题，再看答案</h2></div>
+              <div><p class="kicker">LEARNING DESK · 学习工作台</p><h2>课件、反馈与错题原文</h2></div>
               <div class="workspace-tabs" role="tablist" aria-label="学习工作台">
                 <button class="workspace-tab active" type="button" role="tab" aria-selected="true" data-workspace-tab="errors">错题本 <span>${errors.length}</span></button>
                 <button class="workspace-tab" type="button" role="tab" aria-selected="false" data-workspace-tab="tasks">任务栏 <span>${plan.length}</span></button>
@@ -318,14 +344,18 @@
     return data.signedUrl;
   }
 
-  async function openSourceFor(kind, index) {
-    const items = kind === "error" ? asArray(currentProfile?.error_book) : asArray(currentProfile?.plan);
+  async function openSourceFor(kind, index, sourceItem = 0) {
+    const items = kind === "error"
+      ? asArray(currentProfile?.error_book)
+      : kind === "task"
+        ? asArray(currentProfile?.plan)
+        : asArray(currentProfile?.lessons);
     const item = items[index];
     if (!item) return;
 
-    document.querySelectorAll(".error-card.active, .task-card.active").forEach((card) => card.classList.remove("active"));
+    document.querySelectorAll(".error-card.active, .task-card.active, .lesson-entry.active").forEach((card) => card.classList.remove("active"));
     const selected = document.querySelector(`[data-source-kind="${kind}"][data-source-index="${index}"]`);
-    selected?.closest(".error-card, .task-card")?.classList.add("active");
+    selected?.closest(".error-card, .task-card, .lesson-entry")?.classList.add("active");
 
     const empty = document.querySelector("#source-viewer-empty");
     const active = document.querySelector("#source-viewer-active");
@@ -350,17 +380,19 @@
       document.querySelector("#answer-note").textContent = item.note || "";
     }
 
-    const source = item.source;
+    const source = kind === "lesson"
+      ? asArray(item.sources)[sourceItem] || item.source
+      : item.source;
     const materials = asArray(currentProfile?.materials);
     const material = source ? materials.find((entry) => entry.id === source.material_id) : null;
 
     if (!source || !material?.path || localDemo) {
       empty.hidden = false;
       active.hidden = true;
-      empty.querySelector("strong").textContent = source ? "原题文件尚未上传" : "该任务没有指定原题";
+      empty.querySelector("strong").textContent = source ? "资料文件尚未上传" : "该项目没有指定资料";
       empty.querySelector("p").textContent = source
         ? "老师上传对应 PDF 后，这里会自动定位到原题页面。"
-        : "请按照任务说明完成；需要原题的任务会显示 PDF 入口。";
+        : "需要关联 PDF 的课程、错题或任务会显示资料入口。";
       return;
     }
 
@@ -444,7 +476,11 @@
 
     document.querySelectorAll(".workspace-source-trigger").forEach((button) => {
       button.addEventListener("click", () => {
-        openSourceFor(button.dataset.sourceKind, Number(button.dataset.sourceIndex));
+        const kind = button.dataset.sourceKind;
+        openSourceFor(kind, Number(button.dataset.sourceIndex), Number(button.dataset.sourceItem) || 0);
+        if (kind === "lesson") {
+          document.querySelector("#learning-workspace")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
       });
     });
 
