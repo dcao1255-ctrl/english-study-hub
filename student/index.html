@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex,nofollow,noarchive" />
+    <meta name="description" content="受保护的学生个人英语学习档案。" />
+    <title>学生个人空间 · 逐光英语</title>
+    <link rel="icon" href="../assets/images/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="../assets/css/site.css" />
+  </head>
+  <body class="student-body">
+    <div id="site-header"></div>
+    <main id="student-app" tabindex="-1">
+      <section class="student-gate section">
+        <div class="container gate-layout">
+          <div>
+            <p class="kicker">PRIVATE LEARNING FILE · 私人学习档案</p>
+            <h1>登录后查看<br />个人学习记录</h1>
+            <p class="gate-intro">诊断、错题、课堂记录和学习计划均由权限服务单独读取，不包含在公开网页代码中。</p>
+            <ul class="privacy-points">
+              <li>每个账号只能读取与本人用户 ID 绑定的档案</li>
+              <li>密码由 Supabase Auth 管理，网站不保存明文密码</li>
+              <li>连续失败可能触发服务端限流，请勿共享账号</li>
+            </ul>
+          </div>
+          <div class="login-panel">
+            <div class="login-mark" aria-hidden="true">P</div>
+            <p class="kicker">STUDENT SIGN IN</p>
+            <h2>进入个人空间</h2>
+            <div class="config-notice" id="config-notice" hidden>
+              <strong>私有空间尚未连接</strong>
+              <p>站点管理员需要先完成 Supabase 配置。</p>
+            </div>
+            <form id="login-form">
+              <label for="username">用户名（例如 19260155）</label>
+              <input id="username" name="username" type="text" autocomplete="username" inputmode="text" required maxlength="64" />
+              <label for="password">密码</label>
+              <input id="password" name="password" type="password" autocomplete="current-password" required minlength="8" />
+              <button class="button button-yellow button-block" type="submit">安全登录</button>
+              <p class="form-message" id="form-message" role="status"></p>
+            </form>
+          </div>
+        </div>
+      </section>
+    </main>
+    <div id="site-footer"></div>
+    <script src="../assets/js/site-shell.js" data-root="../"></script>
+    <script src="../assets/js/supabase-config.js"></script>
+    <script src="../assets/js/student.js"></script>
+  </body>
+</html>
