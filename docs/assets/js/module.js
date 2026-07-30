@@ -3,8 +3,10 @@
 
   const page = document.querySelector("#module-page");
   const modules = window.StudyHub?.modules || {};
+  const libraries = window.StudyHub?.libraries || {};
   const requestedId = new URLSearchParams(location.search).get("id") || "zhongkao";
   const module = modules[requestedId];
+  const library = libraries[requestedId] || [];
 
   if (!page) return;
 
@@ -32,6 +34,30 @@
       ${module.resources.map(([title, desc]) => `<article class="resource-row"><span>${title}</span><p>${desc}</p></article>`).join("")}
     </div>`;
 
+  const renderLibraryItems = (items) => `
+    <div class="library-grid">
+      ${items.map((item) => `
+        <article class="library-card">
+          <div class="library-meta"><span>${item.type}</span><small>${item.level}</small></div>
+          <h3>${item.title}</h3>
+          <p>${item.note}</p>
+          ${item.url
+            ? `<a href="${item.url}" target="_blank" rel="noreferrer">${item.access} ↗</a>`
+            : `<span class="library-access">${item.access}</span>`}
+        </article>`).join("") || `<div class="empty-state"><p>没有找到匹配资料，请尝试更短的关键词。</p></div>`}
+    </div>`;
+
+  const renderLibrary = () => `
+    <div class="library-toolbar">
+      <div><p class="kicker">CURATED LIBRARY</p><h2>词书、真题与经典文章</h2></div>
+      <label class="library-search">
+        <span>搜索资料</span>
+        <input id="library-search" type="search" placeholder="输入词书、阅读、真题…" autocomplete="off" />
+      </label>
+    </div>
+    <div id="library-results">${renderLibraryItems(library)}</div>
+    <p class="copyright-note">带“正版购买”的资料仅作书目推荐；公开模块保留官网入口，不上传或分发受版权保护的电子书。</p>`;
+
   page.innerHTML = `
     <section class="module-hero">
       <div class="container module-hero-inner">
@@ -44,6 +70,7 @@
         <button class="tab-button active" type="button" role="tab" aria-selected="true" data-tab="stages">备考路径</button>
         <button class="tab-button" type="button" role="tab" aria-selected="false" data-tab="focus">核心能力</button>
         <button class="tab-button" type="button" role="tab" aria-selected="false" data-tab="resources">资料框架</button>
+        <button class="tab-button" type="button" role="tab" aria-selected="false" data-tab="library">书单与文章</button>
       </div>
     </div>
     <section class="module-body">
@@ -61,15 +88,40 @@
     </section>`;
 
   const content = page.querySelector("#tab-content");
-  const renderers = { stages: renderStages, focus: renderFocus, resources: renderResources };
-  page.querySelectorAll("[data-tab]").forEach((button) => {
+  const renderers = { stages: renderStages, focus: renderFocus, resources: renderResources, library: renderLibrary };
+
+  function bindLibrarySearch() {
+    const search = page.querySelector("#library-search");
+    const results = page.querySelector("#library-results");
+    if (!search || !results) return;
+    search.addEventListener("input", () => {
+      const query = search.value.trim().toLowerCase();
+      const filtered = library.filter((item) =>
+        [item.type, item.title, item.level, item.note, item.access].join(" ").toLowerCase().includes(query)
+      );
+      results.innerHTML = renderLibraryItems(filtered);
+    });
+  }
+
+  const tabButtons = Array.from(page.querySelectorAll("[data-tab]"));
+  tabButtons.forEach((button, buttonIndex) => {
     button.addEventListener("click", () => {
-      page.querySelectorAll("[data-tab]").forEach((item) => {
+      tabButtons.forEach((item) => {
         const selected = item === button;
         item.classList.toggle("active", selected);
         item.setAttribute("aria-selected", String(selected));
       });
       content.innerHTML = renderers[button.dataset.tab]();
+      if (button.dataset.tab === "library") bindLibrarySearch();
+    });
+
+    button.addEventListener("keydown", (event) => {
+      if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+      event.preventDefault();
+      const offset = event.key === "ArrowRight" ? 1 : -1;
+      const nextIndex = (buttonIndex + offset + tabButtons.length) % tabButtons.length;
+      tabButtons[nextIndex].focus();
+      tabButtons[nextIndex].click();
     });
   });
 })();

@@ -1,10 +1,10 @@
 # 逐光英语 Study Hub
-https://dcao1255-ctrl.github.io/english-study-hub/
 
 > **Fuel Your English. Accelerate Your Future.**
 
 为中学以上水平的英语学习者独家定制的英语水平提升火箭加速包。
 
+上传 GitHub Pages 的快速步骤见 [`GITHUB-PAGES.md`](./GITHUB-PAGES.md)。
 
 ## 关于逐光英语
 
@@ -42,12 +42,14 @@ https://dcao1255-ctrl.github.io/english-study-hub/
 
 - 阶段能力诊断
 - 课堂记录与学习反馈
-- 薄弱项和错题复盘
+- 薄弱项、原题 PDF 和分步答案复盘
 - 高频词块与重点笔记
-- 个性化训练计划
+- 可拖动进度的个性化训练计划
 - 阶段进步与能力变化
 
 私人档案需要学生本人登录后查看。账号之间相互隔离，学生数据不会作为公开学习资料展示。
+
+公开模块中的“书单与文章”提供官方样题、开放词表、分级阅读和正版图书建议。商业书籍只提供购买建议，不在公开站点分发电子版。
 
 ## 我们相信
 

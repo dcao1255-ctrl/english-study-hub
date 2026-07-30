@@ -23,6 +23,7 @@
   if (header) {
     header.className = "site-header";
     header.innerHTML = `
+      <div class="slogan-banner"><span>Fuel Your English.</span> Accelerate Your Future.</div>
       <div class="container header-inner">
         <a class="brand" href="${root}index.html" aria-label="逐光英语首页">
           <span class="brand-mark">逐</span>
@@ -59,7 +60,7 @@
     footer.className = "site-footer";
     footer.innerHTML = `
       <div class="container footer-inner">
-        <div><strong class="footer-brand">逐光英语</strong><p>让每次练习都留下可复查的进步</p></div>
+        <div><strong class="footer-brand">逐光英语</strong><p>Fuel Your English. Accelerate Your Future.</p></div>
         <p>考试政策与报名信息以各考试机构最新公告为准</p>
       </div>`;
   }
