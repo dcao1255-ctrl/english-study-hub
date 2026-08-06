@@ -412,12 +412,29 @@
     if (!insightState?.lessons[lessonIndex]) return;
     insightState.selectedLessonIndex = lessonIndex;
     const lesson = insightState.lessons[lessonIndex];
+    const hasLessonScores = lesson.ability_scores && typeof lesson.ability_scores === "object" && Object.keys(lesson.ability_scores).length >= 3;
+    const radarScores = hasLessonScores ? lesson.ability_scores : insightState.scores;
+    insightState.radarScores = radarScores;
     const date = parseLessonDate(lesson);
     const monthIndex = insightState.months.findIndex((month) => month.year === date?.getFullYear() && month.month === date?.getMonth());
     if (monthIndex >= 0) insightState.monthIndex = monthIndex;
     updateCalendarView();
     const detail = document.querySelector("#lesson-detail");
     if (detail) detail.innerHTML = renderLessonDetail(lesson, lessonIndex);
+    const radarTitle = document.querySelector("#ability-radar-title");
+    const radarNote = document.querySelector("#ability-radar-note");
+    const selectedDate = document.querySelector("#ability-selected-date");
+    if (radarTitle) radarTitle.textContent = `${lesson.date || "本次"} · 能力雷达`;
+    if (radarNote) radarNote.textContent = hasLessonScores ? "本次课堂观察指数，不等同于考试分数" : "本次暂无独立快照，暂显示当前总览";
+    if (selectedDate) selectedDate.textContent = `已选择 ${lesson.date || "本次课程"}`;
+    document.querySelectorAll("[data-ability-dimension]").forEach((button) => {
+      const value = Math.max(0, Math.min(100, Number(radarScores[button.dataset.abilityDimension]) || 0));
+      const scoreLabel = button.querySelector("strong");
+      if (scoreLabel) scoreLabel.textContent = String(value);
+    });
+    const radarCanvas = document.querySelector("#ability-radar-chart");
+    radarCanvas?.setAttribute("aria-label", `${lesson.date || "本次课程"}六项英语能力雷达图`);
+    drawRadarChart(radarCanvas, radarScores);
   }
 
   function initializeLessonInsights(lessons, scores) {
@@ -425,9 +442,8 @@
     if (!months.length) return;
     const selectedLessonIndex = Math.max(0, lessons.length - 1);
     const initialDimension = Object.keys(scores || {})[0] || "阅读理解";
-    insightState = { lessons, scores, months, monthIndex: months.length - 1, selectedLessonIndex, dimension: initialDimension };
+    insightState = { lessons, scores, radarScores: scores, months, monthIndex: months.length - 1, selectedLessonIndex, dimension: initialDimension };
     selectLesson(selectedLessonIndex);
-    drawRadarChart(document.querySelector("#ability-radar-chart"), scores);
     updateAbilityTrend(initialDimension);
 
     document.querySelector("#lesson-insights")?.addEventListener("click", (event) => {
@@ -467,7 +483,7 @@
     window.clearTimeout(insightResizeTimer);
     insightResizeTimer = window.setTimeout(() => {
       if (!insightState) return;
-      drawRadarChart(document.querySelector("#ability-radar-chart"), insightState.scores);
+      drawRadarChart(document.querySelector("#ability-radar-chart"), insightState.radarScores || insightState.scores);
       updateAbilityTrend(insightState.dimension);
     }, 120);
   }
@@ -548,8 +564,8 @@
 
               <div class="ability-analytics-panel">
                 <div class="ability-analytics-heading">
-                  <div><strong>能力观察总览</strong><small>课堂观察指数，不等同于考试分数</small></div>
-                  <span>更新于 ${formatDate(profile.updated_at)}</span>
+                  <div><strong id="ability-radar-title">能力观察总览</strong><small id="ability-radar-note">课堂观察指数，不等同于考试分数</small></div>
+                  <span id="ability-selected-date">更新于 ${formatDate(profile.updated_at)}</span>
                 </div>
                 <div class="ability-chart-grid">
                   <article class="ability-chart-card radar-card">
