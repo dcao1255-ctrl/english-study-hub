@@ -411,43 +411,67 @@ p { color: var(--muted); line-height: 1.8; }
 .diagnosis-card .tag { display: inline-block; margin-bottom: 20px; padding: 4px 7px; border-radius: 3px; color: var(--navy-900); background: var(--yellow-300); font-size: 9px; font-weight: 850; }
 .diagnosis-card p { margin-bottom: 16px; font-size: 12px; }
 .diagnosis-card small { display: block; padding-top: 14px; border-top: 1px dashed var(--line); color: var(--muted); line-height: 1.6; }
-.lesson-section { background: var(--navy-900); }
-.lesson-timeline { display: grid; gap: 16px; margin-top: 30px; }
-.lesson-entry { display: grid; grid-template-columns: 104px 1fr; gap: 22px; align-items: stretch; }
-.lesson-date {
-  min-height: 84px;
-  display: grid;
-  place-items: center;
-  align-content: center;
-  padding: 10px;
-  border: 0;
-  border-radius: 7px;
-  color: var(--navy-950);
-  background: var(--yellow-500);
-  font-size: 21px;
-  font-weight: 850;
-  text-align: center;
-}
-button.lesson-date { cursor: pointer; transition: transform 160ms ease, box-shadow 160ms ease; }
-button.lesson-date:hover, .lesson-entry.active .lesson-date { transform: translateY(-2px); box-shadow: 0 8px 0 rgba(240,207,101,0.25); }
-.lesson-date small { display: block; margin-top: 4px; color: var(--navy-900); font-size: 9px; }
-.lesson-date b { display: block; margin-top: 8px; color: var(--navy-900); font-size: 8px; }
-.lesson-copy { padding: 20px; border: 1px solid rgba(255,255,255,0.14); border-radius: 7px; background: var(--navy-800); }
-.lesson-copy h3 { color: white; }
-.lesson-copy p { margin-bottom: 0; color: #cbd8ec; font-size: 12px; }
-.lesson-material-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
-.lesson-material-actions button {
-  min-height: 32px;
-  padding: 0 11px;
-  border: 1px solid rgba(255,255,255,0.46);
-  border-radius: 4px;
-  color: var(--white);
-  background: transparent;
-  cursor: pointer;
-  font-size: 9px;
-  font-weight: 800;
-}
+.lesson-section { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: #f8fbfe; }
+.lesson-section-heading { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 22px; }
+.lesson-section-heading h2 { margin-bottom: 0; color: var(--navy-950); font-size: 30px; }
+.lesson-section-heading > p { max-width: 360px; margin: 0; font-size: 12px; text-align: right; }
+.lesson-insights-layout { display: grid; grid-template-columns: minmax(310px, 0.72fr) minmax(0, 1.28fr); gap: 18px; align-items: stretch; }
+.lesson-calendar-panel,
+.ability-analytics-panel { border: 1px solid var(--line); border-radius: 12px; background: var(--paper); box-shadow: 0 10px 26px rgba(0, 71, 150, 0.07); }
+.lesson-calendar-panel { padding: 20px; }
+.calendar-toolbar { display: grid; grid-template-columns: 34px 1fr 34px; gap: 8px; align-items: center; margin-bottom: 14px; }
+.calendar-toolbar strong { color: var(--navy-950); font-size: 15px; text-align: center; }
+.calendar-toolbar button { width: 34px; height: 34px; border: 1px solid var(--line); border-radius: 7px; color: var(--navy-900); background: #f7fafc; cursor: pointer; }
+.calendar-toolbar button:hover:not(:disabled) { color: var(--white); border-color: var(--navy-900); background: var(--navy-900); }
+.calendar-toolbar button:disabled { cursor: default; opacity: 0.32; }
+.calendar-weekdays,
+.lesson-calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; }
+.calendar-weekdays { margin-bottom: 5px; }
+.calendar-weekdays span { color: #7890a8; font-size: 9px; font-weight: 750; text-align: center; }
+.calendar-day { aspect-ratio: 1; display: grid; place-items: center; border: 0; border-radius: 7px; color: #6c8298; background: #f7fafc; font-size: 11px; }
+button.calendar-day { position: relative; cursor: pointer; }
+.calendar-day-empty { visibility: hidden; }
+.calendar-lesson-day { color: var(--navy-900); background: #e8f2fb; font-weight: 850; }
+.calendar-lesson-day i { position: absolute; right: 5px; bottom: 5px; width: 5px; height: 5px; border-radius: 50%; background: var(--navy-900); }
+.calendar-lesson-day:hover,
+.calendar-lesson-day.selected { color: var(--white); background: var(--navy-900); box-shadow: 0 4px 0 var(--yellow-500); }
+.calendar-lesson-day.selected i { background: var(--yellow-500); }
+.calendar-legend { display: flex; align-items: center; gap: 7px; margin: 12px 0 16px; color: #7890a8; font-size: 9px; }
+.calendar-legend i { width: 7px; height: 7px; border-radius: 50%; background: var(--navy-900); }
+.lesson-detail-card { min-height: 178px; padding: 17px; border-radius: 9px; background: #f4f8fc; }
+.lesson-detail-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; }
+.lesson-detail-meta span { padding: 4px 7px; border-radius: 4px; color: var(--navy-950); background: var(--yellow-500); font-size: 10px; font-weight: 850; }
+.lesson-detail-meta small { color: #6c8298; font-size: 9px; }
+.lesson-detail-card h3 { margin-bottom: 6px; color: var(--navy-950); font-size: 16px; }
+.lesson-detail-card p { margin-bottom: 12px; font-size: 11px; line-height: 1.65; }
+.lesson-detail-empty { min-height: 178px; display: grid; place-items: center; padding: 18px; border-radius: 9px; color: #7890a8; background: #f4f8fc; font-size: 11px; text-align: center; }
+.lesson-material-actions { display: flex; flex-wrap: wrap; gap: 7px; }
+.lesson-material-actions button { min-height: 34px; padding: 0 11px; border: 1px solid var(--navy-900); border-radius: 5px; color: var(--navy-900); background: var(--paper); cursor: pointer; font-size: 9px; font-weight: 800; }
+.lesson-material-actions button:first-child { color: var(--white); background: var(--navy-900); }
 .lesson-material-actions button:hover { color: var(--navy-950); border-color: var(--yellow-500); background: var(--yellow-500); }
+.lesson-material-pending { color: #7890a8; font-size: 10px; }
+.ability-analytics-panel { padding: 20px; }
+.ability-analytics-heading { display: flex; align-items: start; justify-content: space-between; gap: 18px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+.ability-analytics-heading strong,
+.ability-analytics-heading small { display: block; }
+.ability-analytics-heading strong { color: var(--navy-950); font-size: 15px; }
+.ability-analytics-heading small,
+.ability-analytics-heading > span { margin-top: 4px; color: #7890a8; font-size: 9px; }
+.ability-chart-grid { display: grid; grid-template-columns: minmax(280px, 0.9fr) minmax(300px, 1.1fr); gap: 12px; margin-top: 14px; }
+.ability-chart-card { min-width: 0; min-height: 270px; padding: 10px; border: 1px solid #e4edf5; border-radius: 9px; background: #fbfdff; }
+.ability-chart-card canvas { width: 100%; display: block; }
+.trend-card-heading { display: flex; align-items: start; justify-content: space-between; gap: 12px; padding: 7px 7px 0; }
+.trend-card-heading strong,
+.trend-card-heading small { display: block; }
+.trend-card-heading strong { color: var(--navy-950); font-size: 12px; }
+.trend-card-heading small { color: #7890a8; font-size: 9px; text-align: right; }
+.trend-card canvas { margin-top: 12px; }
+.ability-dimension-list { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 7px; margin-top: 12px; }
+.ability-dimension-list button { min-width: 0; display: grid; gap: 4px; padding: 9px 6px; border: 1px solid var(--line); border-radius: 7px; color: #58708a; background: var(--paper); cursor: pointer; text-align: left; }
+.ability-dimension-list button:hover,
+.ability-dimension-list button.selected { color: var(--navy-900); border-color: var(--navy-900); background: #eef5fc; }
+.ability-dimension-list span { overflow: hidden; font-size: 9px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.ability-dimension-list strong { color: inherit; font-size: 15px; }
 .error-list { display: grid; gap: 8px; }
 .error-row { display: grid; grid-template-columns: 42px 110px 1fr 1fr 170px; gap: 14px; align-items: center; padding: 16px; border: 1px solid var(--line); border-radius: 6px; background: var(--paper); }
 .error-row .error-index { color: #a1a7b0; font-size: 10px; }
@@ -689,6 +713,7 @@ button.lesson-date:hover, .lesson-entry.active .lesson-date { transform: transla
   .compact-process { grid-template-columns: 1fr; gap: 14px; }
   .gate-layout { grid-template-columns: 1fr 400px; gap: 44px; }
   .workspace-layout { grid-template-columns: minmax(300px, 0.9fr) minmax(400px, 1.1fr); }
+  .lesson-insights-layout { grid-template-columns: 1fr; }
   .error-row { grid-template-columns: 36px 100px 1fr 1fr; }
   .error-row span:last-child { grid-column: 3 / -1; }
 }
@@ -726,6 +751,8 @@ button.lesson-date:hover, .lesson-entry.active .lesson-date { transform: transla
   .plan-grid { grid-template-columns: repeat(2, 1fr); }
   .module-grid { grid-template-columns: repeat(2, 1fr); }
   .library-grid { grid-template-columns: 1fr; }
+  .ability-chart-grid { grid-template-columns: 1fr; }
+  .ability-dimension-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .workspace-layout { grid-template-columns: 1fr; }
   .workspace-list { max-height: none; border-right: 0; border-bottom: 1px solid var(--line); }
   .source-viewer { min-height: 620px; }
@@ -768,6 +795,13 @@ button.lesson-date:hover, .lesson-entry.active .lesson-date { transform: transla
   .login-panel { padding: 24px; box-shadow: 8px 8px 0 var(--yellow-500); }
   .profile-hero { padding: 48px 0; }
   .profile-hero h1 { font-size: 39px; }
+  .lesson-section-heading { display: block; }
+  .lesson-section-heading > p { margin-top: 8px; text-align: left; }
+  .lesson-calendar-panel, .ability-analytics-panel { padding: 15px; }
+  .ability-analytics-heading { display: block; }
+  .ability-analytics-heading > span { display: block; }
+  .ability-chart-card { min-height: 0; padding: 6px; }
+  .ability-dimension-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .workspace-heading { display: grid; align-items: start; }
   .workspace-tabs { width: 100%; }
   .workspace-tab { flex: 1; }
@@ -781,8 +815,6 @@ button.lesson-date:hover, .lesson-entry.active .lesson-date { transform: transla
   .error-card .workspace-source-trigger { grid-template-columns: 28px 1fr; }
   .error-card b { grid-column: 2; }
   .ability-sheet { padding: 22px; box-shadow: 8px 8px 0 var(--yellow-500); }
-  .lesson-entry { grid-template-columns: 1fr; }
-  .lesson-date { min-height: 66px; justify-content: start; justify-items: start; padding: 14px 18px; }
   .error-row { grid-template-columns: 32px 1fr; }
   .error-row span, .error-row span:last-child { grid-column: 2; }
   .phrase-layout { gap: 34px; }
