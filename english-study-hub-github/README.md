@@ -4,8 +4,7 @@
 
 面向不同英语起点的学习者，把综合能力训练、考试路径和个性化复盘组织成可执行的学习系统。
 
-上传 GitHub Pages 的快速步骤见 [`GITHUB-PAGES.md`](./GITHUB-PAGES.md)。
-本次综合资料库、跟读录音与学习打卡升级见 [`LEARNING-UPGRADE-GUIDE.md`](./LEARNING-UPGRADE-GUIDE.md)。
+https://dcao1255-ctrl.github.io/english-study-hub/
 
 ## 关于逐光英语
 
