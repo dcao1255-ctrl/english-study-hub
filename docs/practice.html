@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="逐光英语音视频学习、跟读录音与阅读打卡。" />
+    <title>学习与打卡 · 逐光英语</title>
+    <link rel="icon" href="./assets/images/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./assets/css/site.css?v=20260811-1" />
+  </head>
+  <body>
+    <div id="site-header"></div>
+    <main>
+      <section class="practice-hero">
+        <div class="container practice-hero-grid">
+          <div>
+            <p class="kicker light" id="practice-series">LEARNING SESSION · 学习任务</p>
+            <h1 id="practice-title">正在读取资料…</h1>
+            <p id="practice-description">请稍候。</p>
+          </div>
+          <aside class="session-status-card">
+            <span id="practice-level">—</span>
+            <strong id="session-status">正在检查学习空间</strong>
+            <p id="session-hint">登录后可播放私有资料、提交跟读录音和保存打卡。</p>
+            <a class="button button-yellow" id="session-login" href="./student/">登录个人空间</a>
+          </aside>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="container practice-layout">
+          <div class="practice-main">
+            <section class="practice-panel" aria-labelledby="media-heading">
+              <div class="practice-panel-heading">
+                <div><span>STEP 01</span><h2 id="media-heading">听音频 / 看视频</h2></div>
+                <div class="playback-controls" id="playback-controls" hidden>
+                  <button type="button" data-action="rewind">后退 5 秒</button>
+                  <label>速度
+                    <select id="playback-rate">
+                      <option value="0.75">0.75×</option>
+                      <option value="1" selected>1.0×</option>
+                      <option value="1.25">1.25×</option>
+                    </select>
+                  </label>
+                </div>
+              </div>
+              <label class="lesson-picker" id="lesson-picker" hidden>选择课次或音轨
+                <select id="lesson-select"></select>
+              </label>
+              <div class="media-stage" id="media-stage">
+                <div class="media-placeholder">
+                  <strong>资料尚未接入</strong>
+                  <p>前端已准备好播放器。完成 Supabase 升级并登记文件路径后，这里会自动显示音频或视频。</p>
+                </div>
+              </div>
+              <div class="segment-list" id="segment-list" aria-label="逐句文本"></div>
+            </section>
+
+            <section class="practice-panel" aria-labelledby="recording-heading">
+              <div class="practice-panel-heading">
+                <div><span>STEP 02</span><h2 id="recording-heading">跟读并回听</h2></div>
+              </div>
+              <p class="panel-intro">点击开始后浏览器才会申请麦克风权限。录音先保存在当前浏览器，确认满意后再主动提交。</p>
+              <div class="recording-actions">
+                <button class="button button-primary-blue" id="record-start" type="button">开始录音</button>
+                <button class="button button-quiet" id="record-stop" type="button" disabled>停止录音</button>
+                <button class="button button-yellow" id="record-upload" type="button" disabled>提交录音</button>
+              </div>
+              <p class="recording-status" id="recording-status" role="status">尚未录音</p>
+              <audio id="recording-preview" controls hidden></audio>
+            </section>
+          </div>
+
+          <aside class="practice-panel checkin-panel" aria-labelledby="checkin-heading">
+            <div class="practice-panel-heading">
+              <div><span>STEP 03</span><h2 id="checkin-heading">完成学习打卡</h2></div>
+            </div>
+            <form id="checkin-form">
+              <label>本次任务
+                <select id="activity-type" required>
+                  <option value="listening">听力学习</option>
+                  <option value="follow_reading">跟读练习</option>
+                  <option value="reading">阅读学习</option>
+                  <option value="video">视频学习</option>
+                </select>
+              </label>
+              <label>完成进度
+                <select id="progress-value" required>
+                  <option value="25">25% · 已开始</option>
+                  <option value="50">50% · 完成一半</option>
+                  <option value="75">75% · 基本完成</option>
+                  <option value="100">100% · 本次完成</option>
+                </select>
+              </label>
+              <label>自我感受
+                <select id="self-rating" required>
+                  <option value="easy">轻松</option>
+                  <option value="just_right" selected>难度合适</option>
+                  <option value="challenging">有挑战</option>
+                  <option value="need_help">需要老师帮助</option>
+                </select>
+              </label>
+              <label>一句复盘
+                <textarea id="reflection" rows="5" maxlength="500" placeholder="今天听懂了什么？哪里还要再练？" required></textarea>
+              </label>
+              <button class="button button-yellow button-block" type="submit">保存本次打卡</button>
+              <p class="form-message" id="checkin-status" role="status"></p>
+            </form>
+            <div class="learning-method" id="learning-method">
+              <strong>建议学习法</strong>
+              <ol>
+                <li>第一遍完整听，理解大意</li>
+                <li>第二遍逐句听，查看文本</li>
+                <li>跟读并回听自己的录音</li>
+                <li>写下一句复盘再打卡</li>
+              </ol>
+            </div>
+          </aside>
+        </div>
+      </section>
+    </main>
+    <div id="site-footer"></div>
+    <script src="./assets/js/site-shell.js?v=20260811-1"></script>
+    <script src="./assets/js/catalog-data.js"></script>
+    <script src="./assets/js/supabase-config.js"></script>
+    <script src="./assets/js/practice.js"></script>
+  </body>
+</html>
