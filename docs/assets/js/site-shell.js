@@ -70,7 +70,7 @@
         <nav class="footer-links" aria-label="页脚学习路径">
           <div><strong>义务阶段</strong><a href="${root}beginner.html#preschool">幼儿英语</a><a href="${root}beginner.html#primary">小学英语</a><a href="${root}zhongkao.html">中考英语</a><a href="${root}reading.html">英语外刊</a></div>
           <div><strong>升学考试</strong><a href="${root}gaokao.html">高考英语</a><a href="${root}kaoyan.html">考研英语</a><a href="${root}ielts.html">雅思备考</a><a href="${root}toefl.html">托福备考</a></div>
-          <div><strong>服务与咨询</strong><a href="${root}student/">个人空间</a><a href="mailto:dcao1255@gmail.com?subject=%E9%80%90%E5%85%89%E8%8B%B1%E8%AF%AD%E5%AE%98%E7%BD%91%E5%92%A8%E8%AF%A2">官网客服</a><a href="mailto:dcao1255@gmail.com?subject=%E9%80%90%E5%85%89%E8%8B%B1%E8%AF%AD%E7%BD%91%E7%AB%99%E5%8F%8D%E9%A6%88">反馈建议</a></div>
+          <div><strong>服务与咨询</strong><a href="${root}student/">个人空间</a><a href="${root}contact.html">联系客服</a></div>
         </nav>
       </div>`;
   }

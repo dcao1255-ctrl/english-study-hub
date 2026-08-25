@@ -409,13 +409,81 @@
     }
   }
 
-  function printHistory(kind) {
-    setHistoryView(kind, true);
-    document.body.dataset.printSection = kind;
-    const cleanup = () => { delete document.body.dataset.printSection; };
-    window.addEventListener("afterprint", cleanup, { once: true });
-    window.setTimeout(() => window.print(), 50);
-    window.setTimeout(cleanup, 1500);
+  function loadPdfLibrary() {
+    if (window.html2pdf) return Promise.resolve();
+    if (window.historyPdfLibrary) return window.historyPdfLibrary;
+    window.historyPdfLibrary = new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = "https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js";
+      script.onload = resolve;
+      script.onerror = () => reject(new Error("PDF library failed to load"));
+      document.head.appendChild(script);
+    });
+    return window.historyPdfLibrary;
+  }
+
+  function buildPdfDocument(kind, entries) {
+    const isErrors = kind === "errors";
+    const documentRoot = document.createElement("section");
+    documentRoot.className = "pdf-export-document";
+    documentRoot.innerHTML = `
+      <header class="pdf-export-header">
+        <p>逐光英语 · 学生个人空间</p>
+        <h1>${escapeHtml(currentProfile?.display_name || "学生")} · ${isErrors ? "历史错题记录" : "历史重点笔记"}</h1>
+        <small>共 ${entries.length} 条 · 生成日期 ${new Intl.DateTimeFormat("zh-CN").format(new Date())}</small>
+      </header>
+      <div class="pdf-export-list">
+        ${entries.map(({ item }, index) => isErrors ? `
+          <article class="pdf-export-record">
+            <div class="pdf-export-meta"><span>${String(index + 1).padStart(2, "0")}</span><strong>${escapeHtml(getItemLessonDate(item) || "日期未记录")} · ${escapeHtml(item.type || "错题")}</strong></div>
+            <h2>${escapeHtml(item.question || item.source?.label || "题目未记录")}</h2>
+            <dl><div><dt>错误答案</dt><dd>${escapeHtml(item.wrong || "未记录")}</dd></div><div><dt>正确答案</dt><dd>${escapeHtml(item.right || "未记录")}</dd></div></dl>
+            <p><b>解析：</b>${escapeHtml(item.note || "暂无解析")}</p>
+          </article>` : `
+          <article class="pdf-export-record">
+            <div class="pdf-export-meta"><span>${String(index + 1).padStart(2, "0")}</span><strong>${escapeHtml(getItemLessonDate(item) || "日期未记录")}</strong></div>
+            <h2>${escapeHtml(item.expression || "重点笔记")}</h2>
+            <p>${escapeHtml(item.note || "暂无内容")}</p>
+          </article>`).join("")}
+      </div>`;
+    return documentRoot;
+  }
+
+  async function generateHistoryPdf(kind, button) {
+    const isErrors = kind === "errors";
+    const items = isErrors ? currentProfile?.error_book : currentProfile?.phrase_notes;
+    const entries = getLessonEntries(items, "all");
+    if (!entries.length) return;
+
+    const originalLabel = button.textContent;
+    button.disabled = true;
+    button.textContent = "正在生成 PDF…";
+    const documentRoot = buildPdfDocument(kind, entries);
+    document.body.appendChild(documentRoot);
+
+    try {
+      await loadPdfLibrary();
+      const safeName = String(currentProfile?.display_name || "学生").replace(/[\\/:*?"<>|]/g, "-");
+      const filename = `${safeName}-${isErrors ? "历史错题" : "重点笔记"}-${new Date().toISOString().slice(0, 10)}.pdf`;
+      await window.html2pdf().set({
+        margin: [10, 10, 12, 10],
+        filename,
+        image: { type: "jpeg", quality: 0.96 },
+        html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
+        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+        pagebreak: { mode: ["css", "legacy"], avoid: ".pdf-export-record" }
+      }).from(documentRoot).save();
+      button.textContent = "PDF 已下载";
+    } catch (error) {
+      console.error("PDF generation failed", error);
+      button.textContent = "生成失败，请重试";
+    } finally {
+      documentRoot.remove();
+      window.setTimeout(() => {
+        button.disabled = false;
+        button.textContent = originalLabel;
+      }, 1800);
+    }
   }
 
   function bindLessonSourceTriggers(root = document) {
@@ -567,7 +635,7 @@
           <div class="container">
             <div class="workspace-heading">
               <div><p class="kicker">LEARNING DESK · 学习工作台</p><h2>课件、反馈与错题原文</h2></div>
-              <div class="history-actions"><button id="show-all-errors" type="button" data-showing-all="false">查看全部错题</button><button type="button" data-print-history="errors">打印全部错题</button><p class="workspace-filter-status"><span id="error-filter-label">当前日期错题</span> <strong id="filtered-error-count">${selectedErrors.length}</strong> 条</p></div>
+              <div class="history-actions"><button id="show-all-errors" type="button" data-showing-all="false">查看全部错题</button><button type="button" data-download-history="errors">下载错题 PDF</button><p class="workspace-filter-status"><span id="error-filter-label">当前日期错题</span> <strong id="filtered-error-count">${selectedErrors.length}</strong> 条</p></div>
             </div>
 
             <div class="workspace-layout">
@@ -607,7 +675,7 @@
 
         <section class="section phrase-band" id="key-notes">
           <div class="container phrase-layout">
-            <div><p class="kicker">KEY PHRASES · 重点笔记</p><h2><span id="phrase-filter-label">本次重点笔记</span> <span id="filtered-phrase-count">${selectedPhrases.length}</span> 条</h2><p>先理解使用场景，再默写并放入自己的句子中。</p><div class="history-actions"><button id="show-all-notes" type="button" data-showing-all="false">查看全部笔记</button><button type="button" data-print-history="notes">打印全部笔记</button></div></div>
+            <div><p class="kicker">KEY PHRASES · 重点笔记</p><h2><span id="phrase-filter-label">本次重点笔记</span> <span id="filtered-phrase-count">${selectedPhrases.length}</span> 条</h2><p>先理解使用场景，再默写并放入自己的句子中。</p><div class="history-actions"><button id="show-all-notes" type="button" data-showing-all="false">查看全部笔记</button><button type="button" data-download-history="notes">下载笔记 PDF</button></div></div>
             <div class="phrase-list" id="phrase-list">
               ${renderPhraseNotes(selectedPhrases)}
             </div>
@@ -724,8 +792,8 @@
     document.querySelector("#show-all-notes")?.addEventListener("click", (event) => {
       setHistoryView("notes", event.currentTarget.dataset.showingAll !== "true");
     });
-    document.querySelectorAll("[data-print-history]").forEach((button) => {
-      button.addEventListener("click", () => printHistory(button.dataset.printHistory));
+    document.querySelectorAll("[data-download-history]").forEach((button) => {
+      button.addEventListener("click", () => generateHistoryPdf(button.dataset.downloadHistory, button));
     });
 
     document.querySelector("#answer-toggle")?.addEventListener("click", (event) => {

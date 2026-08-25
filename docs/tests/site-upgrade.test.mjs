@@ -45,6 +45,7 @@ test("新增页面引用的本地脚本和样式均存在", async () => {
     "reading.html",
     "library.html",
     "practice.html",
+    "contact.html",
     "module.html",
     "student/index.html"
   ]) {
@@ -60,7 +61,7 @@ test("新增页面引用的本地脚本和样式均存在", async () => {
 });
 
 test("公开专题页具备独立 SEO 信息并进入 sitemap", async () => {
-  const pages = ["beginner", "zhongkao", "gaokao", "kaoyan", "ielts", "toefl", "reading"];
+  const pages = ["beginner", "zhongkao", "gaokao", "kaoyan", "ielts", "toefl", "reading", "contact"];
   const sitemap = await read("sitemap.xml");
   const robots = await read("robots.txt");
   assert.match(robots, /Sitemap: https:\/\/dcao1255-ctrl\.github\.io\/english-study-hub\/sitemap\.xml/);
@@ -73,6 +74,16 @@ test("公开专题页具备独立 SEO 信息并进入 sitemap", async () => {
   }
 });
 
+test("联系客服页面通过在线表单提交且不依赖 mailto", async () => {
+  const html = await read("contact.html");
+  const source = await read("assets/js/contact.js");
+  assert.match(html, /id="contact-form"/);
+  assert.match(html, /问题类型/);
+  assert.match(source, /formsubmit\.co\/ajax\/dcao1255@gmail\.com/);
+  assert.match(source, /navigator\.clipboard\.writeText/);
+  assert.doesNotMatch(html + source, /mailto:/);
+});
+
 test("学生个人空间按课程日期联动能力、错题和笔记且不再显示任务栏", async () => {
   const source = await read("assets/js/student.js");
   assert.match(source, /id="lesson-calendar"/);
@@ -83,11 +94,12 @@ test("学生个人空间按课程日期联动能力、错题和笔记且不再�
   assert.match(source, /asArray\(item\?\.abilities\)\.includes\(dimension\)/);
   assert.match(source, /getLessonEntries\(currentProfile\?\.error_book, lessonDate\)/);
   assert.match(source, /getLessonEntries\(currentProfile\?\.phrase_notes, lessonDate\)/);
-  for (const label of ["错题记录", "重点笔记", "能力雷达", "回到首页", "查看全部错题", "打印全部错题", "查看全部笔记", "打印全部笔记"]) {
+  for (const label of ["错题记录", "重点笔记", "能力雷达", "回到首页", "查看全部错题", "下载错题 PDF", "查看全部笔记", "下载笔记 PDF"]) {
     assert.match(source, new RegExp(label));
   }
   assert.match(source, /function setHistoryView/);
-  assert.match(source, /function printHistory/);
+  assert.match(source, /function generateHistoryPdf/);
+  assert.match(source, /html2pdf\.js@0\.10\.1/);
   assert.match(source, /class="error-print-detail"/);
   assert.doesNotMatch(source, /id="tasks-panel"|renderTaskCards|progressByTask/);
 });
@@ -105,10 +117,11 @@ test("首页学习目标使用四卡横向滑动并提供前后按钮", async ()
 
 test("页脚按义务阶段、升学考试和服务咨询分类", async () => {
   const source = await read("assets/js/site-shell.js");
-  for (const label of ["义务阶段", "幼儿英语", "小学英语", "中考英语", "英语外刊", "升学考试", "高考英语", "考研英语", "雅思备考", "托福备考", "服务与咨询", "个人空间", "官网客服", "反馈建议"]) {
+  for (const label of ["义务阶段", "幼儿英语", "小学英语", "中考英语", "英语外刊", "升学考试", "高考英语", "考研英语", "雅思备考", "托福备考", "服务与咨询", "个人空间", "联系客服"]) {
     assert.match(source, new RegExp(label));
   }
-  assert.match(source, /mailto:dcao1255@gmail\.com/);
+  assert.match(source, /contact\.html/);
+  assert.doesNotMatch(source, /反馈建议|mailto:/);
 });
 
 test("Supabase 升级脚本启用 RLS 且媒体桶保持私有", async () => {
