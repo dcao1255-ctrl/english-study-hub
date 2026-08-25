@@ -130,11 +130,16 @@
         <button class="workspace-source-trigger" type="button" data-source-kind="error" data-source-index="${index}">
           <span class="workspace-index">${String(displayIndex + 1).padStart(2, "0")}</span>
           <span>
-            <small>${escapeHtml(item.type || "错题")}</small>
+            <small>${escapeHtml(item.type || "错题")} · ${escapeHtml(getItemLessonDate(item) || "日期未记录")}</small>
             <strong>${escapeHtml(item.question || item.source?.label || item.wrong || "查看原题")}</strong>
           </span>
           <b aria-hidden="true">查看原题 →</b>
         </button>
+        <div class="error-print-detail">
+          <p><strong>错误答案：</strong>${escapeHtml(item.wrong || "未记录")}</p>
+          <p><strong>正确答案：</strong>${escapeHtml(item.right || "未记录")}</p>
+          <p><strong>解析：</strong>${escapeHtml(item.note || "暂无解析")}</p>
+        </div>
       </article>`).join("");
   }
 
@@ -147,6 +152,7 @@
         <span>${String(index + 1).padStart(2, "0")}</span>
         <strong>${escapeHtml(item.expression)}</strong>
         <small>${escapeHtml(item.note)}</small>
+        <em>${escapeHtml(getItemLessonDate(item) || "日期未记录")}</em>
       </div>`).join("");
   }
 
@@ -361,8 +367,55 @@
     if (phraseList) phraseList.innerHTML = renderPhraseNotes(phraseEntries);
     if (errorCount) errorCount.textContent = String(errorEntries.length);
     if (phraseCount) phraseCount.textContent = String(phraseEntries.length);
+    const errorLabel = document.querySelector("#error-filter-label");
+    const phraseLabel = document.querySelector("#phrase-filter-label");
+    if (errorLabel) errorLabel.textContent = "当前日期错题";
+    if (phraseLabel) phraseLabel.textContent = "本次重点笔记";
+    const allErrorsButton = document.querySelector("#show-all-errors");
+    const allNotesButton = document.querySelector("#show-all-notes");
+    if (allErrorsButton) {
+      allErrorsButton.dataset.showingAll = "false";
+      allErrorsButton.textContent = "查看全部错题";
+    }
+    if (allNotesButton) {
+      allNotesButton.dataset.showingAll = "false";
+      allNotesButton.textContent = "查看全部笔记";
+    }
     bindSourceTriggers(errorsPanel);
     resetSourceViewer();
+  }
+
+  function setHistoryView(kind, showAll) {
+    if (!insightState) return;
+    const lesson = insightState.lessons[insightState.selectedLessonIndex];
+    const lessonDate = getLessonDateKey(lesson);
+    const isErrors = kind === "errors";
+    const items = isErrors ? currentProfile?.error_book : currentProfile?.phrase_notes;
+    const entries = getLessonEntries(items, showAll ? "all" : lessonDate);
+    const panel = document.querySelector(isErrors ? "#errors-panel" : "#phrase-list");
+    const count = document.querySelector(isErrors ? "#filtered-error-count" : "#filtered-phrase-count");
+    const label = document.querySelector(isErrors ? "#error-filter-label" : "#phrase-filter-label");
+    const button = document.querySelector(isErrors ? "#show-all-errors" : "#show-all-notes");
+    if (panel) panel.innerHTML = isErrors ? renderErrorCards(entries) : renderPhraseNotes(entries);
+    if (count) count.textContent = String(entries.length);
+    if (label) label.textContent = showAll ? (isErrors ? "历史全部错题" : "历史全部重点笔记") : (isErrors ? "当前日期错题" : "本次重点笔记");
+    if (button) {
+      button.dataset.showingAll = String(showAll);
+      button.textContent = showAll ? "只看本次" : (isErrors ? "查看全部错题" : "查看全部笔记");
+    }
+    if (isErrors) {
+      bindSourceTriggers(panel);
+      resetSourceViewer();
+    }
+  }
+
+  function printHistory(kind) {
+    setHistoryView(kind, true);
+    document.body.dataset.printSection = kind;
+    const cleanup = () => { delete document.body.dataset.printSection; };
+    window.addEventListener("afterprint", cleanup, { once: true });
+    window.setTimeout(() => window.print(), 50);
+    window.setTimeout(cleanup, 1500);
   }
 
   function bindLessonSourceTriggers(root = document) {
@@ -455,15 +508,17 @@
               <p class="profile-meta">${escapeHtml(profile.grade)} · ${escapeHtml(profile.city)} · ${escapeHtml(profile.plan_month)}</p>
               <p>${escapeHtml(profile.current_focus)}</p>
               <div class="profile-actions">
-                <a class="button button-yellow" href="#learning-workspace">打开错题本</a>
+                <a class="button button-yellow" href="#learning-workspace">错题记录</a>
                 <a class="button button-quiet" href="#key-notes">重点笔记</a>
-                <button class="button button-quiet" id="logout-button" type="button">退出登录</button>
+                <a class="button button-quiet" href="#ability-radar">能力雷达</a>
+                <a class="button button-quiet" href="../index.html">回到首页</a>
               </div>
             </div>
             <aside class="ability-sheet">
               <div class="student-id">
                 <span class="student-avatar">${initial}</span>
                 <div><strong>${displayName} · 当前学情雷达</strong><small>更新于 ${formatDate(profile.updated_at)}</small></div>
+                <button class="profile-logout" id="logout-button" type="button">退出登录</button>
               </div>
               <div class="ability-list">
                 ${scores.map(([label, rawScore]) => {
@@ -476,40 +531,34 @@
           </div>
         </section>
 
-        <section class="lesson-filter-section" id="lesson-insights">
-          <div class="container lesson-filter-layout">
-            <div>
-              <div class="lesson-section-heading lesson-filter-heading"><div><p class="kicker">LESSON CALENDAR · 课程日历</p><h2>选择上课日期</h2></div></div>
-              <div class="lesson-calendar-panel" id="lesson-calendar" aria-label="按上课日期筛选"></div>
-            </div>
-            <div id="lesson-detail" aria-live="polite">${renderLessonDetail(selectedLesson, selectedLessonIndex)}</div>
-          </div>
-        </section>
-
-        <section class="section lesson-section">
+        <section class="section lesson-ability-section" id="lesson-insights">
           <div class="container">
             <div class="lesson-section-heading">
-              <div><p class="kicker">ABILITY RADAR · 能力雷达与学情诊断</p><h2>点击能力维度查看诊断</h2></div>
-              <p>课堂观察指数用于识别训练方向，不等同于考试分数</p>
+              <div><p class="kicker">LESSON INSIGHT · 课程与能力</p><h2>选择日期，查看能力诊断</h2></div>
+              <p>日期会同步筛选错题与重点笔记；课堂观察指数不等同于考试分数</p>
             </div>
-            <div class="ability-analytics-panel">
+            <div class="lesson-ability-layout">
+              <div class="lesson-calendar-column">
+              <div class="lesson-calendar-panel" id="lesson-calendar" aria-label="按上课日期筛选"></div>
+                <div id="lesson-detail" aria-live="polite">${renderLessonDetail(selectedLesson, selectedLessonIndex)}</div>
+              </div>
+              <div class="ability-analytics-panel" id="ability-radar">
                 <div class="ability-analytics-heading">
                   <div><strong id="ability-radar-title">能力观察总览</strong><small id="ability-radar-note">课堂观察指数，不等同于考试分数</small></div>
                   <span id="ability-selected-date">更新于 ${formatDate(profile.updated_at)}</span>
                 </div>
-                <div class="ability-chart-grid">
-                  <article class="ability-chart-card radar-card">
-                    <canvas id="ability-radar-chart" role="img" aria-label="当前六项英语能力雷达图"></canvas>
-                  </article>
-                  <article class="ability-chart-card ability-diagnosis-card" id="ability-diagnosis" aria-live="polite">
-                    <div class="ability-diagnosis-heading"><span>选择能力</span><strong>学情诊断</strong></div>
-                    <div><small>学情诊断</small><p>点击下方任一能力维度，查看对应诊断。</p></div>
-                    <div><small>下一步建议</small><p>建议会随上课日期与能力维度同步更新。</p></div>
-                  </article>
-                </div>
+                <article class="ability-chart-card radar-card">
+                  <canvas id="ability-radar-chart" role="img" aria-label="当前六项英语能力雷达图"></canvas>
+                </article>
                 <div class="ability-dimension-list" aria-label="选择要查看趋势的能力维度">
                   ${scores.map(([label, rawScore], index) => `<button class="${index === 0 ? "selected" : ""}" type="button" data-ability-dimension="${escapeHtml(label)}" aria-pressed="${index === 0}"><span>${escapeHtml(label)}</span><strong>${Math.max(0, Math.min(100, Number(rawScore) || 0))}</strong></button>`).join("")}
                 </div>
+                <article class="ability-chart-card ability-diagnosis-card" id="ability-diagnosis" aria-live="polite">
+                  <div class="ability-diagnosis-heading"><span>选择能力</span><strong>学情诊断</strong></div>
+                  <div><small>学情诊断</small><p>点击上方任一能力项，查看对应诊断。</p></div>
+                  <div><small>下一步建议</small><p>建议会随上课日期与能力维度同步更新。</p></div>
+                </article>
+              </div>
             </div>
           </div>
         </section>
@@ -518,7 +567,7 @@
           <div class="container">
             <div class="workspace-heading">
               <div><p class="kicker">LEARNING DESK · 学习工作台</p><h2>课件、反馈与错题原文</h2></div>
-              <p class="workspace-filter-status">当前日期错题 <strong id="filtered-error-count">${selectedErrors.length}</strong> 条</p>
+              <div class="history-actions"><button id="show-all-errors" type="button" data-showing-all="false">查看全部错题</button><button type="button" data-print-history="errors">打印全部错题</button><p class="workspace-filter-status"><span id="error-filter-label">当前日期错题</span> <strong id="filtered-error-count">${selectedErrors.length}</strong> 条</p></div>
             </div>
 
             <div class="workspace-layout">
@@ -558,7 +607,7 @@
 
         <section class="section phrase-band" id="key-notes">
           <div class="container phrase-layout">
-            <div><p class="kicker">KEY PHRASES · 重点笔记</p><h2>本次重点笔记 <span id="filtered-phrase-count">${selectedPhrases.length}</span> 条</h2><p>先理解使用场景，再默写并放入自己的句子中。</p></div>
+            <div><p class="kicker">KEY PHRASES · 重点笔记</p><h2><span id="phrase-filter-label">本次重点笔记</span> <span id="filtered-phrase-count">${selectedPhrases.length}</span> 条</h2><p>先理解使用场景，再默写并放入自己的句子中。</p><div class="history-actions"><button id="show-all-notes" type="button" data-showing-all="false">查看全部笔记</button><button type="button" data-print-history="notes">打印全部笔记</button></div></div>
             <div class="phrase-list" id="phrase-list">
               ${renderPhraseNotes(selectedPhrases)}
             </div>
@@ -668,6 +717,16 @@
     });
 
     bindSourceTriggers();
+
+    document.querySelector("#show-all-errors")?.addEventListener("click", (event) => {
+      setHistoryView("errors", event.currentTarget.dataset.showingAll !== "true");
+    });
+    document.querySelector("#show-all-notes")?.addEventListener("click", (event) => {
+      setHistoryView("notes", event.currentTarget.dataset.showingAll !== "true");
+    });
+    document.querySelectorAll("[data-print-history]").forEach((button) => {
+      button.addEventListener("click", () => printHistory(button.dataset.printHistory));
+    });
 
     document.querySelector("#answer-toggle")?.addEventListener("click", (event) => {
       const reveal = document.querySelector("#answer-reveal");

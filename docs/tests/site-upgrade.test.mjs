@@ -77,10 +77,18 @@ test("学生个人空间按课程日期联动能力、错题和笔记且不再�
   const source = await read("assets/js/student.js");
   assert.match(source, /id="lesson-calendar"/);
   assert.match(source, /calendar-lesson-day/);
+  assert.match(source, /class="lesson-ability-layout"/);
+  assert.match(source, /id="ability-radar"/);
   assert.match(source, /id="ability-diagnosis"/);
   assert.match(source, /asArray\(item\?\.abilities\)\.includes\(dimension\)/);
   assert.match(source, /getLessonEntries\(currentProfile\?\.error_book, lessonDate\)/);
   assert.match(source, /getLessonEntries\(currentProfile\?\.phrase_notes, lessonDate\)/);
+  for (const label of ["错题记录", "重点笔记", "能力雷达", "回到首页", "查看全部错题", "打印全部错题", "查看全部笔记", "打印全部笔记"]) {
+    assert.match(source, new RegExp(label));
+  }
+  assert.match(source, /function setHistoryView/);
+  assert.match(source, /function printHistory/);
+  assert.match(source, /class="error-print-detail"/);
   assert.doesNotMatch(source, /id="tasks-panel"|renderTaskCards|progressByTask/);
 });
 
@@ -100,6 +108,7 @@ test("页脚按义务阶段、升学考试和服务咨询分类", async () => {
   for (const label of ["义务阶段", "幼儿英语", "小学英语", "中考英语", "英语外刊", "升学考试", "高考英语", "考研英语", "雅思备考", "托福备考", "服务与咨询", "个人空间", "官网客服", "反馈建议"]) {
     assert.match(source, new RegExp(label));
   }
+  assert.match(source, /mailto:dcao1255@gmail\.com/);
 });
 
 test("Supabase 升级脚本启用 RLS 且媒体桶保持私有", async () => {
