@@ -5,7 +5,7 @@
   const modules = window.StudyHub?.modules || {};
   const libraries = window.StudyHub?.libraries || {};
   const config = window.STUDY_HUB_CONFIG || {};
-  const requestedId = new URLSearchParams(location.search).get("id") || "zhongkao";
+  const requestedId = document.body.dataset.moduleId || new URLSearchParams(location.search).get("id") || "zhongkao";
   const module = modules[requestedId];
   const staticLibrary = libraries[requestedId] || [];
   let library = [...staticLibrary];

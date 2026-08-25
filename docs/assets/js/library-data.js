@@ -3,6 +3,32 @@
 
   window.StudyHub = window.StudyHub || {};
   window.StudyHub.libraries = {
+    beginner: [
+      {
+        type: "分级课程",
+        title: "British Council A1 Listening",
+        level: "A1",
+        note: "按场景练习基础听力，每课包含任务与文本，适合建立稳定输入习惯。",
+        access: "官网学习",
+        url: "https://learnenglish.britishcouncil.org/skills/listening/a1-listening"
+      },
+      {
+        type: "高频词汇",
+        title: "New General Service List",
+        level: "基础词汇",
+        note: "免费开放的通用高频词表，适合按主题和掌握度逐步建立词汇底库。",
+        access: "免费开放",
+        url: "https://www.newgeneralservicelist.org/home"
+      },
+      {
+        type: "基础听读",
+        title: "VOA Learning English - Beginning Level",
+        level: "A1-A2",
+        note: "语速和主题更适合初学者，可用于短时听读、跟读和复述。",
+        access: "官网学习",
+        url: "https://learningenglish.voanews.com/"
+      }
+    ],
     zhongkao: [
       {
         type: "开放词表",
@@ -171,6 +197,40 @@
         note: "分别用于可理解听力输入与科学人文长文精读，保留官网链接而不搬运文章。",
         access: "官网阅读",
         url: "https://learningenglish.voanews.com/"
+      }
+    ],
+    reading: [
+      {
+        type: "分级新闻",
+        title: "VOA Learning English",
+        level: "A2-B1",
+        note: "适合从学习型英语过渡到真实新闻语篇，配合听力和文本使用。",
+        access: "官网阅读",
+        url: "https://learningenglish.voanews.com/"
+      },
+      {
+        type: "科学人文",
+        title: "Smithsonian Magazine",
+        level: "B1-C1",
+        note: "覆盖科学、历史与文化主题，适合高考、考研和留学考试精读。",
+        access: "官网阅读",
+        url: "https://www.smithsonianmag.com/"
+      },
+      {
+        type: "全球议题",
+        title: "UN News",
+        level: "B2-C1",
+        note: "使用联合国公开新闻练习正式语体、全球议题词汇和观点概括。",
+        access: "官网阅读",
+        url: "https://news.un.org/en/"
+      },
+      {
+        type: "公共领域",
+        title: "Project Gutenberg",
+        level: "经典精读",
+        note: "合法获取公共领域英文作品，适合选择短篇进行精读、朗读与复述。",
+        access: "公共领域",
+        url: "https://www.gutenberg.org/"
       }
     ]
   };

@@ -5,22 +5,22 @@
   const root = script?.dataset.root || "./";
   const params = new URLSearchParams(location.search);
   const moduleId = params.get("id");
+  const pageModuleId = document.body.dataset.moduleId || "";
   const onStudentPage = location.pathname.includes("/student/");
   const pageName = location.pathname.split("/").pop() || "index.html";
   const active = onStudentPage
     ? "student"
     : pageName === "library.html" || pageName === "practice.html"
       ? "library"
-      : moduleId || (pageName === "module.html" ? "" : "home");
+      : pageModuleId || moduleId || (pageName === "module.html" ? "" : "home");
 
   const links = [
     ["home", "首页", `${root}index.html`],
-    ["library", "资料库", `${root}library.html`],
-    ["zhongkao", "中考", `${root}module.html?id=zhongkao`],
-    ["gaokao", "高考", `${root}module.html?id=gaokao`],
-    ["kaoyan", "考研", `${root}module.html?id=kaoyan`],
-    ["ielts", "雅思", `${root}module.html?id=ielts`],
-    ["toefl", "托福", `${root}module.html?id=toefl`]
+    ["zhongkao", "中考", `${root}zhongkao.html`],
+    ["gaokao", "高考", `${root}gaokao.html`],
+    ["kaoyan", "考研", `${root}kaoyan.html`],
+    ["ielts", "雅思", `${root}ielts.html`],
+    ["toefl", "托福", `${root}toefl.html`]
   ];
 
   const header = document.querySelector("#site-header");
@@ -66,8 +66,12 @@
     footer.className = "site-footer";
     footer.innerHTML = `
       <div class="container footer-inner">
-        <div><strong class="footer-brand">逐光英语</strong><p>Fuel Your English. Accelerate Your Future.</p></div>
-        <p>考试信息以官方公告为准；学习资料仅在获得相应授权后使用</p>
+        <div class="footer-about"><strong class="footer-brand">逐光英语</strong><p>面向中学及以上学习者的英语能力提升与升学考试路径。</p></div>
+        <nav class="footer-links" aria-label="页脚学习路径">
+          <div><strong>学习起点</strong><a href="${root}beginner.html">英语初学者</a><a href="${root}zhongkao.html">中考英语</a><a href="${root}gaokao.html">高考英语</a></div>
+          <div><strong>升学考试</strong><a href="${root}kaoyan.html">考研英语</a><a href="${root}ielts.html">雅思备考</a><a href="${root}toefl.html">托福备考</a></div>
+          <div><strong>阅读与服务</strong><a href="${root}reading.html">英语外刊推荐</a><a href="${root}library.html">精选资料目录</a><a href="${root}student/">学生个人空间</a></div>
+        </nav>
       </div>`;
   }
 })();

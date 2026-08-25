@@ -531,6 +531,33 @@ p { color: var(--muted); line-height: 1.8; }
 .profile-alert { margin-top: 22px; padding: 13px; border-left: 4px solid var(--coral); background: #fff0ed; }
 .profile-alert strong { display: block; margin-bottom: 4px; color: var(--coral); font-size: 11px; }
 .profile-alert p { margin: 0; color: var(--ink); font-size: 12px; }
+.lesson-filter-section {
+  position: sticky;
+  top: 94px;
+  z-index: 18;
+  padding: 14px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: rgba(248, 251, 254, 0.97);
+  backdrop-filter: blur(14px);
+}
+.lesson-filter-layout { display: grid; grid-template-columns: minmax(260px, 0.7fr) minmax(0, 1.3fr); gap: 16px; align-items: center; }
+.lesson-date-control { display: grid; gap: 7px; }
+.lesson-date-control label { color: var(--navy-950); font-size: 11px; font-weight: 850; }
+.lesson-date-control select {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 38px 0 12px;
+  border: 1px solid var(--navy-900);
+  border-radius: 6px;
+  color: var(--navy-950);
+  background: var(--paper);
+  font-weight: 750;
+}
+.lesson-date-control small { color: #6c8298; font-size: 9px; }
+.lesson-filter-section .lesson-detail-card { min-height: 0; padding: 13px 16px; }
+.lesson-filter-section .lesson-detail-card p { margin-bottom: 7px; }
+.lesson-filter-section .lesson-detail-meta { margin-bottom: 5px; }
 .diagnosis-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(225px, 1fr)); gap: 14px; }
 .diagnosis-card { padding: 24px; border: 1px solid var(--line); border-radius: 7px; background: var(--paper); box-shadow: var(--shadow); }
 .diagnosis-card .tag { display: inline-block; margin-bottom: 20px; padding: 4px 7px; border-radius: 3px; color: var(--navy-900); background: var(--yellow-300); font-size: 9px; font-weight: 850; }
@@ -591,6 +618,12 @@ button.calendar-day { position: relative; cursor: pointer; }
 .trend-card-heading strong { color: var(--navy-950); font-size: 12px; }
 .trend-card-heading small { color: #7890a8; font-size: 9px; text-align: right; }
 .trend-card canvas { margin-top: 12px; }
+.ability-diagnosis-card { display: grid; align-content: start; gap: 16px; padding: 20px; }
+.ability-diagnosis-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+.ability-diagnosis-heading span { padding: 4px 8px; border-radius: 3px; color: var(--navy-950); background: var(--yellow-500); font-size: 9px; font-weight: 850; }
+.ability-diagnosis-heading strong { color: var(--navy-950); font-size: 16px; }
+.ability-diagnosis-card small { display: block; margin-bottom: 5px; color: var(--navy-900); font-size: 9px; font-weight: 850; }
+.ability-diagnosis-card p { margin: 0; font-size: 12px; line-height: 1.7; }
 .ability-dimension-list { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 7px; margin-top: 12px; }
 .ability-dimension-list button { min-width: 0; display: grid; gap: 4px; padding: 9px 6px; border: 1px solid var(--line); border-radius: 7px; color: #58708a; background: var(--paper); cursor: pointer; text-align: left; }
 .ability-dimension-list button:hover,
@@ -626,6 +659,8 @@ button.calendar-day { position: relative; cursor: pointer; }
   margin-bottom: 22px;
 }
 .workspace-heading h2 { margin-bottom: 0; }
+.workspace-filter-status { margin: 0; color: var(--muted); font-size: 11px; }
+.workspace-filter-status strong { color: var(--navy-900); font-size: 18px; }
 .workspace-tabs {
   display: inline-flex;
   gap: 6px;
@@ -826,10 +861,16 @@ button.calendar-day { position: relative; cursor: pointer; }
 .workspace-empty { padding: 30px; text-align: center; }
 .workspace-empty p { margin-bottom: 0; font-size: 12px; }
 
-.site-footer { border-top: 1px solid var(--line); background: var(--cream); }
-.footer-inner { min-height: 94px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.site-footer { border-top: 1px solid var(--line); background: var(--navy-950); }
+.footer-inner { min-height: 230px; display: grid; grid-template-columns: minmax(220px, 0.75fr) minmax(0, 1.25fr); align-items: start; gap: 64px; padding-top: 44px; padding-bottom: 44px; color: var(--white); }
 .footer-brand { font-weight: 850; }
-.footer-inner p { margin: 0; font-size: 11px; }
+.footer-inner p { margin: 8px 0 0; color: #c7d6e8; font-size: 11px; line-height: 1.7; }
+.footer-about { max-width: 300px; }
+.footer-links { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; }
+.footer-links div { display: grid; align-content: start; gap: 8px; }
+.footer-links strong { margin-bottom: 3px; color: var(--yellow-500); font-size: 11px; }
+.footer-links a { color: #dce7f2; font-size: 11px; text-decoration: none; }
+.footer-links a:hover { color: var(--white); text-decoration: underline; text-underline-offset: 3px; }
 .noscript { margin: 20px; padding: 14px; background: #fff0ed; }
 
 @media (max-width: 1020px) {
@@ -875,6 +916,8 @@ button.calendar-day { position: relative; cursor: pointer; }
   .module-tabs-wrap { top: 92px; }
   .module-layout { grid-template-columns: 1fr; }
   .profile-hero-grid, .phrase-layout { grid-template-columns: 1fr; }
+  .lesson-filter-layout { grid-template-columns: 1fr; }
+  .lesson-filter-section { position: static; }
   .diagnosis-grid { grid-template-columns: 1fr; }
   .plan-grid { grid-template-columns: repeat(2, 1fr); }
   .module-grid { grid-template-columns: repeat(2, 1fr); }
@@ -938,6 +981,7 @@ button.calendar-day { position: relative; cursor: pointer; }
   .login-panel { padding: 24px; box-shadow: 8px 8px 0 var(--yellow-500); }
   .profile-hero { padding: 48px 0; }
   .profile-hero h1 { font-size: 39px; }
+  .lesson-filter-section { padding: 12px 0; }
   .lesson-section-heading { display: block; }
   .lesson-section-heading > p { margin-top: 8px; text-align: left; }
   .lesson-calendar-panel, .ability-analytics-panel { padding: 15px; }
@@ -966,6 +1010,8 @@ button.calendar-day { position: relative; cursor: pointer; }
   .phrase-item small { grid-column: 2; }
   .plan-grid { grid-template-columns: 1fr; }
   .footer-inner { min-height: 120px; flex-direction: column; align-items: flex-start; justify-content: center; gap: 8px; }
+  .footer-inner { grid-template-columns: 1fr; gap: 28px; }
+  .footer-links { width: 100%; grid-template-columns: 1fr; }
 }
 
 @media (prefers-reduced-motion: reduce) {

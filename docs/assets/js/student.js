@@ -11,8 +11,6 @@
 
   let supabase = null;
   let currentProfile = null;
-  let currentUserId = "";
-  let progressByTask = {};
   let insightState = null;
   let insightResizeTimer = null;
   const signedUrlCache = new Map();
@@ -40,6 +38,7 @@
     materials: [],
     error_book: [
       {
+        lesson_date: "2026-07-26",
         type: "主谓一致",
         question: "根据中文完成句子：健康的饮食确保你的身体获得足够的能量。",
         wrong: "A healthy diet make sure ...",
@@ -49,26 +48,9 @@
       }
     ],
     phrase_notes: [
-      { expression: "be responsible for", note: "对……负责；承担……职责" },
-      { expression: "as few ... as possible", note: "尽可能少的……，用于可数名词复数" },
-      { expression: "end up with", note: "最终得到；以……结束" }
-    ],
-    plan: [
-      {
-        task_id: "daily-copy",
-        cadence: "每天",
-        title: "10–15 分钟范文临摹",
-        detail: "临摹高考英语作文范文，注意字母连接、单词间距和句子布局。",
-        focus: "提升书写连贯性"
-      },
-      {
-        task_id: "weekly-reading",
-        cadence: "每周",
-        title: "1 篇高阶完形或阅读",
-        detail: "完成后用一句话概括主旨，并解释关键选项依据。",
-        focus: "保持理解优势",
-        source: { material_id: "demo", page: 5, label: "0726 作业 · 高中完形" }
-      }
+      { lesson_date: "2026-07-26", expression: "be responsible for", note: "对……负责；承担……职责" },
+      { lesson_date: "2026-08-02", expression: "as few ... as possible", note: "尽可能少的……，用于可数名词复数" },
+      { lesson_date: "2026-08-02", expression: "end up with", note: "最终得到；以……结束" }
     ]
   };
 
@@ -84,6 +66,37 @@
 
   function asArray(value) {
     return Array.isArray(value) ? value : [];
+  }
+
+  function normalizeLessonDate(value) {
+    const text = String(value || "");
+    const isoMatch = text.match(/(20\d{2})[-_/](\d{1,2})[-_/](\d{1,2})/);
+    if (isoMatch) {
+      return `${isoMatch[1]}-${isoMatch[2].padStart(2, "0")}-${isoMatch[3].padStart(2, "0")}`;
+    }
+    const shortMatch = text.match(/(?:^|\D)(\d{1,2})[\/-](\d{1,2})(?:\D|$)/);
+    return shortMatch ? `2026-${shortMatch[1].padStart(2, "0")}-${shortMatch[2].padStart(2, "0")}` : "";
+  }
+
+  function getLessonDateKey(lesson) {
+    return normalizeLessonDate(lesson?.iso_date || lesson?.date);
+  }
+
+  function getItemLessonDate(item) {
+    return [
+      item?.lesson_date,
+      item?.iso_date,
+      item?.date,
+      item?.source?.lesson_date,
+      item?.source?.material_id,
+      item?.source?.label
+    ].map(normalizeLessonDate).find(Boolean) || "";
+  }
+
+  function getLessonEntries(items, lessonDate) {
+    return asArray(items)
+      .map((item, index) => ({ item, index }))
+      .filter(({ item }) => lessonDate === "all" || getItemLessonDate(item) === lessonDate);
   }
 
   function isConfigured() {
@@ -107,24 +120,15 @@
       : new Intl.DateTimeFormat("zh-CN", { year: "numeric", month: "2-digit", day: "2-digit" }).format(date);
   }
 
-  function getTaskKey(item, index) {
-    return String(item.task_id || `task-${index + 1}`);
-  }
-
-  function getProgress(item, index) {
-    const saved = progressByTask[getTaskKey(item, index)];
-    return Math.max(0, Math.min(100, Number(saved?.progress) || 0));
-  }
-
-  function renderErrorCards(errors) {
-    if (!errors.length) {
+  function renderErrorCards(entries) {
+    if (!entries.length) {
       return `<div class="workspace-empty"><strong>暂时没有错题</strong><p>新的错题会按课程持续加入。</p></div>`;
     }
 
-    return errors.map((item, index) => `
+    return entries.map(({ item, index }, displayIndex) => `
       <article class="error-card" data-source-kind="error" data-source-index="${index}">
         <button class="workspace-source-trigger" type="button" data-source-kind="error" data-source-index="${index}">
-          <span class="workspace-index">${String(index + 1).padStart(2, "0")}</span>
+          <span class="workspace-index">${String(displayIndex + 1).padStart(2, "0")}</span>
           <span>
             <small>${escapeHtml(item.type || "错题")}</small>
             <strong>${escapeHtml(item.question || item.source?.label || item.wrong || "查看原题")}</strong>
@@ -134,86 +138,16 @@
       </article>`).join("");
   }
 
-  function renderTaskCards(plan) {
-    if (!plan.length) {
-      return `<div class="workspace-empty"><strong>暂时没有任务</strong><p>老师更新阶段计划后会显示在这里。</p></div>`;
+  function renderPhraseNotes(entries) {
+    if (!entries.length) {
+      return `<div class="workspace-empty"><strong>本次课程暂无重点笔记</strong><p>老师补充后会按日期显示在这里。</p></div>`;
     }
-
-    return plan.map((item, index) => {
-      const taskKey = getTaskKey(item, index);
-      const progress = getProgress(item, index);
-      const completed = progress === 100;
-      return `
-        <article class="task-card ${completed ? "completed" : ""}" data-source-kind="task" data-source-index="${index}" data-task-key="${escapeHtml(taskKey)}">
-          <div class="task-topline">
-            <span>${escapeHtml(item.cadence || "阶段")}</span>
-            <small>${escapeHtml(item.focus || "")}</small>
-          </div>
-          <button class="task-source workspace-source-trigger" type="button" data-source-kind="task" data-source-index="${index}">
-            <strong>${escapeHtml(item.title || "学习任务")}</strong>
-            <p>${escapeHtml(item.detail || "")}</p>
-            <span>${item.source ? "打开对应原题 →" : "查看任务说明 →"}</span>
-          </button>
-          <div class="task-progress-row">
-            <label for="progress-${index}">完成进度 <b data-progress-label>${progress}%</b></label>
-            <input id="progress-${index}" type="range" min="0" max="100" step="5" value="${progress}" data-progress-range data-task-key="${escapeHtml(taskKey)}" aria-label="${escapeHtml(item.title || "任务")}完成进度" />
-            <div class="progress-track" aria-hidden="true"><span data-progress-fill style="width:${progress}%"></span></div>
-            <button class="complete-button" type="button" data-complete-task data-task-key="${escapeHtml(taskKey)}">${completed ? "已完成 ✓" : "标记完成"}</button>
-            <small class="save-status" data-save-status></small>
-          </div>
-        </article>`;
-    }).join("");
-  }
-
-  function parseLessonDate(lesson) {
-    const isoDate = String(lesson?.iso_date || "");
-    if (/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) {
-      const [year, month, day] = isoDate.split("-").map(Number);
-      return new Date(year, month - 1, day, 12);
-    }
-
-    const shortDate = String(lesson?.date || "").match(/^(\d{1,2})\/(\d{1,2})$/);
-    if (!shortDate) return null;
-    return new Date(2026, Number(shortDate[1]) - 1, Number(shortDate[2]), 12);
-  }
-
-  function getLessonMonths(lessons) {
-    const monthMap = new Map();
-    lessons.forEach((lesson) => {
-      const date = parseLessonDate(lesson);
-      if (!date) return;
-      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-      monthMap.set(key, { key, year: date.getFullYear(), month: date.getMonth() });
-    });
-    return [...monthMap.values()].sort((a, b) => a.key.localeCompare(b.key));
-  }
-
-  function renderLessonCalendar(year, month, lessons, selectedLessonIndex) {
-    const firstDay = new Date(year, month, 1, 12);
-    const daysInMonth = new Date(year, month + 1, 0, 12).getDate();
-    const leadingDays = (firstDay.getDay() + 6) % 7;
-    const lessonByDay = new Map();
-
-    lessons.forEach((lesson, index) => {
-      const date = parseLessonDate(lesson);
-      if (date?.getFullYear() === year && date.getMonth() === month) lessonByDay.set(date.getDate(), { lesson, index });
-    });
-
-    const cells = [];
-    for (let index = 0; index < leadingDays; index += 1) cells.push('<span class="calendar-day calendar-day-empty" aria-hidden="true"></span>');
-    for (let day = 1; day <= daysInMonth; day += 1) {
-      const lessonInfo = lessonByDay.get(day);
-      if (!lessonInfo) {
-        cells.push(`<span class="calendar-day"><span>${day}</span></span>`);
-        continue;
-      }
-      const selected = lessonInfo.index === selectedLessonIndex;
-      cells.push(`
-        <button class="calendar-day calendar-lesson-day ${selected ? "selected" : ""}" type="button" data-calendar-lesson="${lessonInfo.index}" aria-pressed="${selected}" aria-label="${month + 1} 月 ${day} 日，${escapeHtml(lessonInfo.lesson.title || "课堂记录")}">
-          <span>${day}</span><i aria-hidden="true"></i>
-        </button>`);
-    }
-    return cells.join("");
+    return entries.map(({ item }, index) => `
+      <div class="phrase-item">
+        <span>${String(index + 1).padStart(2, "0")}</span>
+        <strong>${escapeHtml(item.expression)}</strong>
+        <small>${escapeHtml(item.note)}</small>
+      </div>`).join("");
   }
 
   function renderLessonDetail(lesson, lessonIndex) {
@@ -308,104 +242,77 @@
     });
   }
 
-  function getAbilityTrend(lessons, dimension) {
-    return lessons.map((lesson) => ({ lesson, date: parseLessonDate(lesson), score: Number(lesson.ability_scores?.[dimension]) }))
-      .filter((item) => item.date && Number.isFinite(item.score))
-      .sort((a, b) => a.date - b.date);
+  function findAbilityDiagnosis(dimension, lesson) {
+    const diagnosis = asArray(lesson?.diagnosis).length ? asArray(lesson.diagnosis) : asArray(currentProfile?.diagnosis);
+    const aliases = {
+      "阅读理解": ["阅读"],
+      "完形语境": ["完形", "语境"],
+      "词汇运用": ["词汇", "词块"],
+      "翻译表达": ["翻译", "语言输出", "表达"],
+      "写作输出": ["写作", "语言输出", "输出"],
+      "书写规范": ["书写", "习惯", "先想后写"]
+    };
+    const keywords = [dimension, ...(aliases[dimension] || [])];
+    return diagnosis.find((item) => {
+      const target = `${item.ability || ""} ${item.title || ""}`;
+      return keywords.some((keyword) => target.includes(keyword));
+    }) || null;
   }
 
-  function drawTrendChart(canvas, points, dimension) {
-    if (!canvas) return;
-    const { context, width, height } = setCanvasSize(canvas, 210);
-    const padding = { top: 22, right: 18, bottom: 38, left: 34 };
-    const plotWidth = width - padding.left - padding.right;
-    const plotHeight = height - padding.top - padding.bottom;
-    context.clearRect(0, 0, width, height);
-
-    [0, 25, 50, 75, 100].forEach((score) => {
-      const y = padding.top + plotHeight - score / 100 * plotHeight;
-      context.beginPath();
-      context.moveTo(padding.left, y);
-      context.lineTo(width - padding.right, y);
-      context.strokeStyle = score === 0 ? "#b8cbe0" : "#e4edf5";
-      context.stroke();
-      if (score === 0 || score === 50 || score === 100) {
-        context.fillStyle = "#7890a8";
-        context.font = "10px Inter, sans-serif";
-        context.textAlign = "right";
-        context.textBaseline = "middle";
-        context.fillText(String(score), padding.left - 7, y);
-      }
-    });
-
-    if (!points.length) return;
-    const xFor = (index) => padding.left + (points.length === 1 ? plotWidth / 2 : plotWidth * index / (points.length - 1));
-    const yFor = (score) => padding.top + plotHeight - Math.max(0, Math.min(100, score)) / 100 * plotHeight;
-
-    if (points.length > 1) {
-      context.beginPath();
-      points.forEach((point, index) => index ? context.lineTo(xFor(index), yFor(point.score)) : context.moveTo(xFor(index), yFor(point.score)));
-      context.strokeStyle = "#004796";
-      context.lineWidth = 3;
-      context.lineJoin = "round";
-      context.stroke();
-    }
-
-    points.forEach((point, index) => {
-      const x = xFor(index);
-      const y = yFor(point.score);
-      context.beginPath();
-      context.arc(x, y, 5, 0, Math.PI * 2);
-      context.fillStyle = index === points.length - 1 ? "#f0cf65" : "#ffffff";
-      context.fill();
-      context.strokeStyle = "#004796";
-      context.lineWidth = 2;
-      context.stroke();
-      context.fillStyle = "#21486e";
-      context.font = "700 10px Inter, sans-serif";
-      context.textAlign = "center";
-      context.fillText(String(Math.round(point.score)), x, y - 13);
-      context.fillStyle = "#7890a8";
-      context.font = "10px Inter, sans-serif";
-      context.fillText(point.lesson.date || "", x, height - 14);
-    });
-
-    canvas.setAttribute("aria-label", `${dimension}课堂观察指数趋势：${points.map((point) => `${point.lesson.date}为${point.score}`).join("，")}`);
-  }
-
-  function updateAbilityTrend(dimension) {
+  function updateAbilityDiagnosis(dimension) {
     if (!insightState) return;
     insightState.dimension = dimension;
-    const points = getAbilityTrend(insightState.lessons, dimension);
+    const lesson = insightState.lessons[insightState.selectedLessonIndex];
+    const score = Math.max(0, Math.min(100, Number(insightState.radarScores?.[dimension]) || 0));
+    const diagnosis = findAbilityDiagnosis(dimension, lesson);
     document.querySelectorAll("[data-ability-dimension]").forEach((button) => {
       const selected = button.dataset.abilityDimension === dimension;
       button.classList.toggle("selected", selected);
       button.setAttribute("aria-pressed", String(selected));
     });
-    const trendTitle = document.querySelector("#ability-trend-title");
-    const trendSummary = document.querySelector("#ability-trend-summary");
-    if (trendTitle) trendTitle.textContent = `${dimension} · 日期变化`;
-    if (trendSummary) {
-      const first = points[0];
-      const latest = points[points.length - 1];
-      const delta = first && latest ? latest.score - first.score : 0;
-      const direction = delta > 0 ? `提升 ${delta} 点` : delta < 0 ? `变化 ${delta} 点` : "保持稳定";
-      trendSummary.textContent = first && latest ? `${first.lesson.date} 至 ${latest.lesson.date}：${direction}` : "等待更多课堂记录";
-    }
-    drawTrendChart(document.querySelector("#ability-trend-chart"), points, dimension);
+    const panel = document.querySelector("#ability-diagnosis");
+    if (!panel) return;
+    const status = score >= 80 ? "优势保持" : score >= 65 ? "稳步提升" : "优先训练";
+    panel.innerHTML = `
+      <div class="ability-diagnosis-heading"><span>${escapeHtml(diagnosis?.tag || status)}</span><strong>${escapeHtml(dimension)} · ${score}</strong></div>
+      <div><small>学情诊断</small><p>${escapeHtml(diagnosis?.summary || `${dimension}目前处于${status}阶段，需要结合本次课堂表现继续观察。`)}</p></div>
+      <div><small>下一步建议</small><p>${escapeHtml(diagnosis?.next || currentProfile?.current_focus || "保持稳定练习，并在下一次课堂中复查。")}</p></div>`;
   }
 
-  function updateCalendarView() {
-    if (!insightState) return;
-    const monthInfo = insightState.months[insightState.monthIndex];
-    const label = document.querySelector("#lesson-calendar-label");
-    const grid = document.querySelector("#lesson-calendar-grid");
-    const previous = document.querySelector("#calendar-previous");
-    const next = document.querySelector("#calendar-next");
-    if (label) label.textContent = `${monthInfo.year} 年 ${monthInfo.month + 1} 月`;
-    if (grid) grid.innerHTML = renderLessonCalendar(monthInfo.year, monthInfo.month, insightState.lessons, insightState.selectedLessonIndex);
-    if (previous) previous.disabled = insightState.monthIndex === 0;
-    if (next) next.disabled = insightState.monthIndex === insightState.months.length - 1;
+  function resetSourceViewer() {
+    const empty = document.querySelector("#source-viewer-empty");
+    const active = document.querySelector("#source-viewer-active");
+    if (empty) {
+      empty.hidden = false;
+      empty.querySelector("strong").textContent = "选择左侧错题";
+      empty.querySelector("p").textContent = "这里会先显示原题页面；正确答案默认隐藏。";
+    }
+    if (active) active.hidden = true;
+  }
+
+  function updateLessonScopedContent(lesson) {
+    const lessonDate = getLessonDateKey(lesson);
+    const errorEntries = getLessonEntries(currentProfile?.error_book, lessonDate);
+    const phraseEntries = getLessonEntries(currentProfile?.phrase_notes, lessonDate);
+    const errorsPanel = document.querySelector("#errors-panel");
+    const phraseList = document.querySelector("#phrase-list");
+    const errorCount = document.querySelector("#filtered-error-count");
+    const phraseCount = document.querySelector("#filtered-phrase-count");
+    if (errorsPanel) errorsPanel.innerHTML = renderErrorCards(errorEntries);
+    if (phraseList) phraseList.innerHTML = renderPhraseNotes(phraseEntries);
+    if (errorCount) errorCount.textContent = String(errorEntries.length);
+    if (phraseCount) phraseCount.textContent = String(phraseEntries.length);
+    bindSourceTriggers(errorsPanel);
+    resetSourceViewer();
+  }
+
+  function bindLessonSourceTriggers(root = document) {
+    root?.querySelectorAll("[data-lesson-source]").forEach((sourceButton) => {
+      sourceButton.addEventListener("click", () => {
+        openSourceFor("lesson", Number(sourceButton.dataset.sourceIndex), Number(sourceButton.dataset.sourceItem) || 0);
+        document.querySelector("#learning-workspace")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    });
   }
 
   function selectLesson(lessonIndex) {
@@ -415,12 +322,13 @@
     const hasLessonScores = lesson.ability_scores && typeof lesson.ability_scores === "object" && Object.keys(lesson.ability_scores).length >= 3;
     const radarScores = hasLessonScores ? lesson.ability_scores : insightState.scores;
     insightState.radarScores = radarScores;
-    const date = parseLessonDate(lesson);
-    const monthIndex = insightState.months.findIndex((month) => month.year === date?.getFullYear() && month.month === date?.getMonth());
-    if (monthIndex >= 0) insightState.monthIndex = monthIndex;
-    updateCalendarView();
+    const dateSelect = document.querySelector("#lesson-date-filter");
+    if (dateSelect) dateSelect.value = String(lessonIndex);
     const detail = document.querySelector("#lesson-detail");
-    if (detail) detail.innerHTML = renderLessonDetail(lesson, lessonIndex);
+    if (detail) {
+      detail.innerHTML = renderLessonDetail(lesson, lessonIndex);
+      bindLessonSourceTriggers(detail);
+    }
     const radarTitle = document.querySelector("#ability-radar-title");
     const radarNote = document.querySelector("#ability-radar-note");
     const selectedDate = document.querySelector("#ability-selected-date");
@@ -435,44 +343,23 @@
     const radarCanvas = document.querySelector("#ability-radar-chart");
     radarCanvas?.setAttribute("aria-label", `${lesson.date || "本次课程"}六项英语能力雷达图`);
     drawRadarChart(radarCanvas, radarScores);
+    updateAbilityDiagnosis(insightState.dimension);
+    updateLessonScopedContent(lesson);
   }
 
   function initializeLessonInsights(lessons, scores) {
-    const months = getLessonMonths(lessons);
-    if (!months.length) return;
+    if (!lessons.length) return;
     const selectedLessonIndex = Math.max(0, lessons.length - 1);
     const initialDimension = Object.keys(scores || {})[0] || "阅读理解";
-    insightState = { lessons, scores, radarScores: scores, months, monthIndex: months.length - 1, selectedLessonIndex, dimension: initialDimension };
+    insightState = { lessons, scores, radarScores: scores, selectedLessonIndex, dimension: initialDimension };
     selectLesson(selectedLessonIndex);
-    updateAbilityTrend(initialDimension);
 
-    document.querySelector("#lesson-insights")?.addEventListener("click", (event) => {
-      const lessonButton = event.target.closest("[data-calendar-lesson]");
-      if (lessonButton) {
-        selectLesson(Number(lessonButton.dataset.calendarLesson));
-        return;
-      }
-      const sourceButton = event.target.closest("[data-lesson-source]");
-      if (sourceButton) {
-        openSourceFor("lesson", Number(sourceButton.dataset.sourceIndex), Number(sourceButton.dataset.sourceItem) || 0);
-        document.querySelector("#learning-workspace")?.scrollIntoView({ behavior: "smooth", block: "start" });
-        return;
-      }
-      const abilityButton = event.target.closest("[data-ability-dimension]");
-      if (abilityButton) updateAbilityTrend(abilityButton.dataset.abilityDimension);
+    document.querySelectorAll("[data-ability-dimension]").forEach((abilityButton) => {
+      abilityButton.addEventListener("click", () => updateAbilityDiagnosis(abilityButton.dataset.abilityDimension));
     });
 
-    document.querySelector("#calendar-previous")?.addEventListener("click", () => {
-      if (insightState.monthIndex > 0) {
-        insightState.monthIndex -= 1;
-        updateCalendarView();
-      }
-    });
-    document.querySelector("#calendar-next")?.addEventListener("click", () => {
-      if (insightState.monthIndex < insightState.months.length - 1) {
-        insightState.monthIndex += 1;
-        updateCalendarView();
-      }
+    document.querySelector("#lesson-date-filter")?.addEventListener("change", (event) => {
+      selectLesson(Number(event.currentTarget.value));
     });
 
     window.removeEventListener("resize", redrawInsightCharts);
@@ -484,7 +371,6 @@
     insightResizeTimer = window.setTimeout(() => {
       if (!insightState) return;
       drawRadarChart(document.querySelector("#ability-radar-chart"), insightState.radarScores || insightState.scores);
-      updateAbilityTrend(insightState.dimension);
     }, 120);
   }
 
@@ -493,11 +379,14 @@
     const displayName = escapeHtml(profile.display_name || "同学");
     const initial = escapeHtml((profile.display_name || "学").slice(0, 1));
     const scores = Object.entries(profile.ability_scores && typeof profile.ability_scores === "object" ? profile.ability_scores : {});
-    const diagnosis = asArray(profile.diagnosis);
     const lessons = asArray(profile.lessons);
     const errors = asArray(profile.error_book);
     const phrases = asArray(profile.phrase_notes);
-    const plan = asArray(profile.plan);
+    const selectedLessonIndex = Math.max(0, lessons.length - 1);
+    const selectedLesson = lessons[selectedLessonIndex];
+    const selectedLessonDate = getLessonDateKey(selectedLesson);
+    const selectedErrors = getLessonEntries(errors, selectedLessonDate);
+    const selectedPhrases = getLessonEntries(phrases, selectedLessonDate);
 
     app.innerHTML = `
       <div class="student-dashboard">
@@ -509,8 +398,7 @@
               <p class="profile-meta">${escapeHtml(profile.grade)} · ${escapeHtml(profile.city)} · ${escapeHtml(profile.plan_month)}</p>
               <p>${escapeHtml(profile.current_focus)}</p>
               <div class="profile-actions">
-                <a class="button button-yellow" href="#learning-workspace" data-workspace-tab="errors">打开错题本</a>
-                <a class="button button-primary-blue" href="#learning-workspace" data-workspace-tab="tasks">打开任务栏</a>
+                <a class="button button-yellow" href="#learning-workspace">打开错题本</a>
                 <a class="button button-quiet" href="#key-notes">重点笔记</a>
                 <button class="button button-quiet" id="logout-button" type="button">退出登录</button>
               </div>
@@ -531,38 +419,26 @@
           </div>
         </section>
 
-        <section class="section diagnosis-section">
-          <div class="container">
-            <div class="section-heading">
-              <div><p class="kicker">DIAGNOSIS · 学情诊断</p><h2>优势要保持，时间投向短板</h2></div>
-              <p class="section-note">依据课堂任务与作业表现持续更新</p>
+        <section class="lesson-filter-section" id="lesson-insights">
+          <div class="container lesson-filter-layout">
+            <div class="lesson-date-control">
+              <label for="lesson-date-filter">选择上课日期</label>
+              <select id="lesson-date-filter" ${lessons.length ? "" : "disabled"}>
+                ${lessons.map((lesson, index) => `<option value="${index}" ${index === selectedLessonIndex ? "selected" : ""}>${escapeHtml(lesson.iso_date || lesson.date || `第 ${index + 1} 次课`)} · ${escapeHtml(lesson.label || lesson.title || "课堂记录")}</option>`).join("")}
+              </select>
+              <small>下方能力雷达、错题本和重点笔记会随日期同步切换。</small>
             </div>
-            <div class="diagnosis-grid">
-              ${diagnosis.map((item) => `<article class="diagnosis-card"><span class="tag">${escapeHtml(item.tag)}</span><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(item.summary)}</p><small>下一步：${escapeHtml(item.next)}</small></article>`).join("")}
-            </div>
+            <div id="lesson-detail" aria-live="polite">${renderLessonDetail(selectedLesson, selectedLessonIndex)}</div>
           </div>
         </section>
 
-        <section class="section lesson-section" id="lesson-insights">
+        <section class="section lesson-section">
           <div class="container">
             <div class="lesson-section-heading">
-              <div><p class="kicker">LESSON INSIGHTS · 课堂观察</p><h2>课堂记录与能力变化</h2></div>
-              <p>点击日期查看资料；点击能力维度查看趋势</p>
+              <div><p class="kicker">ABILITY RADAR · 能力雷达与学情诊断</p><h2>点击能力维度查看诊断</h2></div>
+              <p>课堂观察指数用于识别训练方向，不等同于考试分数</p>
             </div>
-            <div class="lesson-insights-layout">
-              <div class="lesson-calendar-panel">
-                <div class="calendar-toolbar">
-                  <button id="calendar-previous" type="button" aria-label="上一个有课程记录的月份">←</button>
-                  <strong id="lesson-calendar-label">课程日历</strong>
-                  <button id="calendar-next" type="button" aria-label="下一个有课程记录的月份">→</button>
-                </div>
-                <div class="calendar-weekdays" aria-hidden="true"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div>
-                <div class="lesson-calendar-grid" id="lesson-calendar-grid" aria-label="课程日历"></div>
-                <p class="calendar-legend"><i aria-hidden="true"></i> 蓝色日期表示有课堂记录</p>
-                <div id="lesson-detail" aria-live="polite">${renderLessonDetail(lessons[lessons.length - 1], Math.max(0, lessons.length - 1))}</div>
-              </div>
-
-              <div class="ability-analytics-panel">
+            <div class="ability-analytics-panel">
                 <div class="ability-analytics-heading">
                   <div><strong id="ability-radar-title">能力观察总览</strong><small id="ability-radar-note">课堂观察指数，不等同于考试分数</small></div>
                   <span id="ability-selected-date">更新于 ${formatDate(profile.updated_at)}</span>
@@ -571,15 +447,15 @@
                   <article class="ability-chart-card radar-card">
                     <canvas id="ability-radar-chart" role="img" aria-label="当前六项英语能力雷达图"></canvas>
                   </article>
-                  <article class="ability-chart-card trend-card">
-                    <div class="trend-card-heading"><strong id="ability-trend-title">能力日期变化</strong><small id="ability-trend-summary">选择维度查看</small></div>
-                    <canvas id="ability-trend-chart" role="img"></canvas>
+                  <article class="ability-chart-card ability-diagnosis-card" id="ability-diagnosis" aria-live="polite">
+                    <div class="ability-diagnosis-heading"><span>选择能力</span><strong>学情诊断</strong></div>
+                    <div><small>学情诊断</small><p>点击下方任一能力维度，查看对应诊断。</p></div>
+                    <div><small>下一步建议</small><p>建议会随上课日期与能力维度同步更新。</p></div>
                   </article>
                 </div>
                 <div class="ability-dimension-list" aria-label="选择要查看趋势的能力维度">
                   ${scores.map(([label, rawScore], index) => `<button class="${index === 0 ? "selected" : ""}" type="button" data-ability-dimension="${escapeHtml(label)}" aria-pressed="${index === 0}"><span>${escapeHtml(label)}</span><strong>${Math.max(0, Math.min(100, Number(rawScore) || 0))}</strong></button>`).join("")}
                 </div>
-              </div>
             </div>
           </div>
         </section>
@@ -588,22 +464,18 @@
           <div class="container">
             <div class="workspace-heading">
               <div><p class="kicker">LEARNING DESK · 学习工作台</p><h2>课件、反馈与错题原文</h2></div>
-              <div class="workspace-tabs" role="tablist" aria-label="学习工作台">
-                <button class="workspace-tab active" type="button" role="tab" aria-selected="true" data-workspace-tab="errors">错题本 <span>${errors.length}</span></button>
-                <button class="workspace-tab" type="button" role="tab" aria-selected="false" data-workspace-tab="tasks">任务栏 <span>${plan.length}</span></button>
-              </div>
+              <p class="workspace-filter-status">当前日期错题 <strong id="filtered-error-count">${selectedErrors.length}</strong> 条</p>
             </div>
 
             <div class="workspace-layout">
               <div class="workspace-list">
-                <div id="errors-panel" role="tabpanel">${renderErrorCards(errors)}</div>
-                <div id="tasks-panel" role="tabpanel" hidden>${renderTaskCards(plan)}</div>
+                <div id="errors-panel">${renderErrorCards(selectedErrors)}</div>
               </div>
 
               <aside class="source-viewer" aria-live="polite">
                 <div class="source-empty" id="source-viewer-empty">
                   <span aria-hidden="true">PDF</span>
-                  <strong>选择左侧错题或任务</strong>
+                  <strong>选择左侧错题</strong>
                   <p>这里会先显示原题页面；正确答案默认隐藏。</p>
                 </div>
                 <div class="source-active" id="source-viewer-active" hidden>
@@ -632,37 +504,16 @@
 
         <section class="section phrase-band" id="key-notes">
           <div class="container phrase-layout">
-            <div><p class="kicker">KEY PHRASES · 重点笔记</p><h2>不背孤立单词，<br />记住完整表达</h2><p>先理解使用场景，再默写并放入自己的句子中。</p></div>
-            <div class="phrase-list">
-              ${phrases.map((item, index) => `<div class="phrase-item"><span>${String(index + 1).padStart(2, "0")}</span><strong>${escapeHtml(item.expression)}</strong><small>${escapeHtml(item.note)}</small></div>`).join("")}
+            <div><p class="kicker">KEY PHRASES · 重点笔记</p><h2>本次重点笔记 <span id="filtered-phrase-count">${selectedPhrases.length}</span> 条</h2><p>先理解使用场景，再默写并放入自己的句子中。</p></div>
+            <div class="phrase-list" id="phrase-list">
+              ${renderPhraseNotes(selectedPhrases)}
             </div>
           </div>
         </section>
       </div>`;
 
-    bindDashboardEvents(errors, plan);
+    bindDashboardEvents();
     initializeLessonInsights(lessons, Object.fromEntries(scores));
-    setWorkspaceTab("errors", true);
-  }
-
-  function setWorkspaceTab(tabName, openFirstItem) {
-    const isErrors = tabName === "errors";
-    const errorsPanel = document.querySelector("#errors-panel");
-    const tasksPanel = document.querySelector("#tasks-panel");
-    if (!errorsPanel || !tasksPanel) return;
-
-    errorsPanel.hidden = !isErrors;
-    tasksPanel.hidden = isErrors;
-    document.querySelectorAll(".workspace-tab").forEach((button) => {
-      const selected = button.dataset.workspaceTab === tabName;
-      button.classList.toggle("active", selected);
-      button.setAttribute("aria-selected", String(selected));
-    });
-
-    if (!openFirstItem) return;
-    const items = isErrors ? asArray(currentProfile?.error_book) : asArray(currentProfile?.plan);
-    const firstIndex = isErrors ? 0 : Math.max(0, items.findIndex((item) => item.source));
-    if (items[firstIndex]) openSourceFor(isErrors ? "error" : "task", firstIndex);
   }
 
   async function getSignedUrl(material) {
@@ -677,17 +528,13 @@
   }
 
   async function openSourceFor(kind, index, sourceItem = 0) {
-    const items = kind === "error"
-      ? asArray(currentProfile?.error_book)
-      : kind === "task"
-        ? asArray(currentProfile?.plan)
-        : asArray(currentProfile?.lessons);
+    const items = kind === "error" ? asArray(currentProfile?.error_book) : asArray(currentProfile?.lessons);
     const item = items[index];
     if (!item) return;
 
-    document.querySelectorAll(".error-card.active, .task-card.active, .lesson-entry.active").forEach((card) => card.classList.remove("active"));
+    document.querySelectorAll(".error-card.active, .lesson-entry.active").forEach((card) => card.classList.remove("active"));
     const selected = document.querySelector(`[data-source-kind="${kind}"][data-source-index="${index}"]`);
-    selected?.closest(".error-card, .task-card, .lesson-entry")?.classList.add("active");
+    selected?.closest(".error-card, .lesson-entry")?.classList.add("active");
 
     const empty = document.querySelector("#source-viewer-empty");
     const active = document.querySelector("#source-viewer-active");
@@ -751,92 +598,22 @@
     }
   }
 
-  async function saveProgress(taskKey, progress, card) {
-    const status = card?.querySelector("[data-save-status]");
-    if (status) status.textContent = "正在保存…";
-
-    if (localDemo || !supabase || !currentUserId) {
-      progressByTask[taskKey] = { progress };
-      if (status) status.textContent = "演示模式";
-      return;
-    }
-
-    const payload = {
-      student_id: currentUserId,
-      task_key: taskKey,
-      progress,
-      completed_at: progress === 100 ? new Date().toISOString() : null
-    };
-    const { error } = await supabase
-      .from("student_plan_progress")
-      .upsert(payload, { onConflict: "student_id,task_key" });
-
-    if (error) {
-      console.error("Progress save failed", error);
-      if (status) status.textContent = "保存失败，请稍后重试";
-      return;
-    }
-
-    progressByTask[taskKey] = payload;
-    if (status) status.textContent = "已同步";
+  function bindSourceTriggers(root = document) {
+    root?.querySelectorAll(".workspace-source-trigger").forEach((button) => {
+      button.addEventListener("click", () => {
+        const kind = button.dataset.sourceKind;
+        openSourceFor(kind, Number(button.dataset.sourceIndex), Number(button.dataset.sourceItem) || 0);
+      });
+    });
   }
 
-  function updateProgressCard(card, progress) {
-    const safeProgress = Math.max(0, Math.min(100, Number(progress) || 0));
-    const label = card.querySelector("[data-progress-label]");
-    const fill = card.querySelector("[data-progress-fill]");
-    const completeButton = card.querySelector("[data-complete-task]");
-    if (label) label.textContent = `${safeProgress}%`;
-    if (fill) fill.style.width = `${safeProgress}%`;
-    card.classList.toggle("completed", safeProgress === 100);
-    if (completeButton) completeButton.textContent = safeProgress === 100 ? "已完成 ✓" : "标记完成";
-  }
-
-  function bindDashboardEvents(errors, plan) {
+  function bindDashboardEvents() {
     document.querySelector("#logout-button")?.addEventListener("click", async () => {
       if (supabase) await supabase.auth.signOut();
       location.reload();
     });
 
-    document.querySelectorAll("[data-workspace-tab]").forEach((button) => {
-      button.addEventListener("click", (event) => {
-        event.preventDefault();
-        setWorkspaceTab(button.dataset.workspaceTab, true);
-        document.querySelector("#learning-workspace")?.scrollIntoView({ behavior: "smooth", block: "start" });
-      });
-    });
-
-    document.querySelectorAll(".workspace-source-trigger").forEach((button) => {
-      button.addEventListener("click", () => {
-        const kind = button.dataset.sourceKind;
-        openSourceFor(kind, Number(button.dataset.sourceIndex), Number(button.dataset.sourceItem) || 0);
-        if (kind === "lesson") {
-          document.querySelector("#learning-workspace")?.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
-      });
-    });
-
-    document.querySelectorAll("[data-progress-range]").forEach((range) => {
-      range.addEventListener("input", () => {
-        const card = range.closest(".task-card");
-        if (card) updateProgressCard(card, range.value);
-      });
-      range.addEventListener("change", () => {
-        const card = range.closest(".task-card");
-        if (card) saveProgress(range.dataset.taskKey, Number(range.value), card);
-      });
-    });
-
-    document.querySelectorAll("[data-complete-task]").forEach((button) => {
-      button.addEventListener("click", () => {
-        const card = button.closest(".task-card");
-        const range = card?.querySelector("[data-progress-range]");
-        if (!card || !range) return;
-        range.value = "100";
-        updateProgressCard(card, 100);
-        saveProgress(button.dataset.taskKey, 100, card);
-      });
-    });
+    bindSourceTriggers();
 
     document.querySelector("#answer-toggle")?.addEventListener("click", (event) => {
       const reveal = document.querySelector("#answer-reveal");
@@ -850,20 +627,6 @@
   async function fetchProfile() {
     const { data, error } = await supabase.from("student_profiles").select("*").single();
     if (error) throw error;
-
-    const progressResult = await supabase
-      .from("student_plan_progress")
-      .select("task_key,progress,completed_at");
-
-    if (progressResult.error) {
-      console.warn("Progress table is not ready", progressResult.error);
-      progressByTask = {};
-    } else {
-      progressByTask = Object.fromEntries(
-        (progressResult.data || []).map((item) => [item.task_key, item])
-      );
-    }
-
     renderProfile(data);
   }
 
@@ -889,7 +652,6 @@
 
       const { data } = await supabase.auth.getSession();
       if (data.session) {
-        currentUserId = data.session.user.id;
         await fetchProfile();
       }
     } catch (error) {
@@ -924,7 +686,6 @@
     }
 
     try {
-      currentUserId = data.user?.id || data.session?.user?.id || "";
       await fetchProfile();
     } catch (profileError) {
       console.error("Profile loading failed", profileError);
