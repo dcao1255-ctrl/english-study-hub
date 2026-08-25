@@ -410,11 +410,11 @@
   }
 
   function loadPdfLibrary() {
-    if (window.html2pdf) return Promise.resolve();
+    if (window.jspdf?.jsPDF) return Promise.resolve();
     if (window.historyPdfLibrary) return window.historyPdfLibrary;
     window.historyPdfLibrary = new Promise((resolve, reject) => {
       const script = document.createElement("script");
-      script.src = "https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js";
+      script.src = "https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js";
       script.onload = resolve;
       script.onerror = () => reject(new Error("PDF library failed to load"));
       document.head.appendChild(script);
@@ -422,31 +422,109 @@
     return window.historyPdfLibrary;
   }
 
-  function buildPdfDocument(kind, entries) {
+  function wrapPdfText(context, value, maxWidth) {
+    const lines = [];
+    String(value || "未记录").split(/\r?\n/).forEach((paragraph) => {
+      let line = "";
+      Array.from(paragraph || " ").forEach((character) => {
+        const candidate = `${line}${character}`;
+        if (line && context.measureText(candidate).width > maxWidth) {
+          lines.push(line);
+          line = character;
+        } else {
+          line = candidate;
+        }
+      });
+      lines.push(line || " ");
+    });
+    return lines;
+  }
+
+  function buildPdfCanvases(kind, entries) {
     const isErrors = kind === "errors";
-    const documentRoot = document.createElement("section");
-    documentRoot.className = "pdf-export-document";
-    documentRoot.innerHTML = `
-      <header class="pdf-export-header">
-        <p>逐光英语 · 学生个人空间</p>
-        <h1>${escapeHtml(currentProfile?.display_name || "学生")} · ${isErrors ? "历史错题记录" : "历史重点笔记"}</h1>
-        <small>共 ${entries.length} 条 · 生成日期 ${new Intl.DateTimeFormat("zh-CN").format(new Date())}</small>
-      </header>
-      <div class="pdf-export-list">
-        ${entries.map(({ item }, index) => isErrors ? `
-          <article class="pdf-export-record">
-            <div class="pdf-export-meta"><span>${String(index + 1).padStart(2, "0")}</span><strong>${escapeHtml(getItemLessonDate(item) || "日期未记录")} · ${escapeHtml(item.type || "错题")}</strong></div>
-            <h2>${escapeHtml(item.question || item.source?.label || "题目未记录")}</h2>
-            <dl><div><dt>错误答案</dt><dd>${escapeHtml(item.wrong || "未记录")}</dd></div><div><dt>正确答案</dt><dd>${escapeHtml(item.right || "未记录")}</dd></div></dl>
-            <p><b>解析：</b>${escapeHtml(item.note || "暂无解析")}</p>
-          </article>` : `
-          <article class="pdf-export-record">
-            <div class="pdf-export-meta"><span>${String(index + 1).padStart(2, "0")}</span><strong>${escapeHtml(getItemLessonDate(item) || "日期未记录")}</strong></div>
-            <h2>${escapeHtml(item.expression || "重点笔记")}</h2>
-            <p>${escapeHtml(item.note || "暂无内容")}</p>
-          </article>`).join("")}
-      </div>`;
-    return documentRoot;
+    const pageWidth = 1240;
+    const pageHeight = 1754;
+    const margin = 86;
+    const contentWidth = pageWidth - margin * 2;
+    const pages = [];
+    let canvas;
+    let context;
+    let cursorY;
+
+    function addPage() {
+      canvas = document.createElement("canvas");
+      canvas.width = pageWidth;
+      canvas.height = pageHeight;
+      context = canvas.getContext("2d");
+      context.fillStyle = "#ffffff";
+      context.fillRect(0, 0, pageWidth, pageHeight);
+      context.fillStyle = "#0b57a3";
+      context.font = '700 20px "PingFang SC", "Microsoft YaHei", sans-serif';
+      context.fillText("逐光英语 · 学生个人空间", margin, 72);
+      context.fillStyle = "#0b2f57";
+      context.font = '700 38px "PingFang SC", "Microsoft YaHei", sans-serif';
+      context.fillText(`${currentProfile?.display_name || "学生"} · ${isErrors ? "历史错题记录" : "历史重点笔记"}`, margin, 126);
+      context.fillStyle = "#f4ca4b";
+      context.fillRect(margin, 150, contentWidth, 7);
+      cursorY = 190;
+      pages.push(canvas);
+    }
+
+    function getLines(text, font, width = contentWidth - 48) {
+      context.font = font;
+      return wrapPdfText(context, text, width);
+    }
+
+    function drawLines(lines, x, lineHeight, color, font) {
+      context.fillStyle = color;
+      context.font = font;
+      lines.forEach((line) => {
+        context.fillText(line, x, cursorY);
+        cursorY += lineHeight;
+      });
+    }
+
+    addPage();
+    entries.forEach(({ item }, index) => {
+      const meta = `${String(index + 1).padStart(2, "0")} · ${getItemLessonDate(item) || "日期未记录"}${isErrors ? ` · ${item.type || "错题"}` : ""}`;
+      const title = isErrors ? (item.question || item.source?.label || "题目未记录") : (item.expression || "重点笔记");
+      const details = isErrors
+        ? [`错误答案：${item.wrong || "未记录"}`, `正确答案：${item.right || "未记录"}`, `解析：${item.note || "暂无解析"}`]
+        : [`笔记：${item.note || "暂无内容"}`];
+      const metaLines = getLines(meta, '700 21px "PingFang SC", "Microsoft YaHei", sans-serif');
+      const titleLines = getLines(title, '700 30px "PingFang SC", "Microsoft YaHei", sans-serif');
+      const detailLines = details.map((detail) => getLines(detail, '400 23px "PingFang SC", "Microsoft YaHei", sans-serif'));
+      const recordHeight = 42 + metaLines.length * 30 + titleLines.length * 42 + detailLines.reduce((sum, lines) => sum + lines.length * 34 + 8, 0);
+
+      if (cursorY + recordHeight > pageHeight - 100) addPage();
+      const recordTop = cursorY - 22;
+      context.fillStyle = "#f5f8fc";
+      context.fillRect(margin, recordTop, contentWidth, recordHeight);
+      context.strokeStyle = "#cad8e6";
+      context.lineWidth = 2;
+      context.strokeRect(margin, recordTop, contentWidth, recordHeight);
+      cursorY += 14;
+      drawLines(metaLines, margin + 24, 30, "#48627d", '700 21px "PingFang SC", "Microsoft YaHei", sans-serif');
+      cursorY += 8;
+      drawLines(titleLines, margin + 24, 42, "#0b2f57", '700 30px "PingFang SC", "Microsoft YaHei", sans-serif');
+      cursorY += 8;
+      detailLines.forEach((lines) => {
+        drawLines(lines, margin + 24, 34, "#273d55", '400 23px "PingFang SC", "Microsoft YaHei", sans-serif');
+        cursorY += 8;
+      });
+      cursorY = recordTop + recordHeight + 20;
+    });
+
+    pages.forEach((page, index) => {
+      const pageContext = page.getContext("2d");
+      pageContext.fillStyle = "#65788d";
+      pageContext.font = '400 18px "PingFang SC", "Microsoft YaHei", sans-serif';
+      pageContext.textAlign = "left";
+      pageContext.fillText(`共 ${entries.length} 条 · 生成日期 ${new Intl.DateTimeFormat("zh-CN").format(new Date())}`, margin, pageHeight - 48);
+      pageContext.textAlign = "right";
+      pageContext.fillText(`${index + 1} / ${pages.length}`, pageWidth - margin, pageHeight - 48);
+    });
+    return pages;
   }
 
   async function generateHistoryPdf(kind, button) {
@@ -458,27 +536,24 @@
     const originalLabel = button.textContent;
     button.disabled = true;
     button.textContent = "正在生成 PDF…";
-    const documentRoot = buildPdfDocument(kind, entries);
-    document.body.appendChild(documentRoot);
 
     try {
       await loadPdfLibrary();
+      if (document.fonts?.ready) await document.fonts.ready;
+      const pages = buildPdfCanvases(kind, entries);
       const safeName = String(currentProfile?.display_name || "学生").replace(/[\\/:*?"<>|]/g, "-");
       const filename = `${safeName}-${isErrors ? "历史错题" : "重点笔记"}-${new Date().toISOString().slice(0, 10)}.pdf`;
-      await window.html2pdf().set({
-        margin: [10, 10, 12, 10],
-        filename,
-        image: { type: "jpeg", quality: 0.96 },
-        html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
-        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-        pagebreak: { mode: ["css", "legacy"], avoid: ".pdf-export-record" }
-      }).from(documentRoot).save();
+      const pdf = new window.jspdf.jsPDF({ orientation: "portrait", unit: "mm", format: "a4", compress: true });
+      pages.forEach((page, index) => {
+        if (index > 0) pdf.addPage();
+        pdf.addImage(page.toDataURL("image/jpeg", 0.94), "JPEG", 0, 0, 210, 297, undefined, "FAST");
+      });
+      pdf.save(filename);
       button.textContent = "PDF 已下载";
     } catch (error) {
       console.error("PDF generation failed", error);
       button.textContent = "生成失败，请重试";
     } finally {
-      documentRoot.remove();
       window.setTimeout(() => {
         button.disabled = false;
         button.textContent = originalLabel;
