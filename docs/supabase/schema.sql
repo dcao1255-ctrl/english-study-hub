@@ -9,6 +9,7 @@ create table if not exists public.student_profiles (
   city text not null default '',
   plan_month text not null default '',
   current_focus text not null default '',
+  storage_folder text unique,
   ability_scores jsonb not null default '{}'::jsonb,
   diagnosis jsonb not null default '[]'::jsonb,
   lessons jsonb not null default '[]'::jsonb,
@@ -97,7 +98,7 @@ create trigger set_student_plan_progress_updated_at
 before update on public.student_plan_progress
 for each row execute function public.set_student_profile_updated_at();
 
--- 私有 PDF：文件路径第一层必须是学生的 Auth UUID。
+-- 私有 PDF：默认使用 Auth UUID，也可为学生档案绑定唯一的 storage_folder。
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (
   'student-materials',
@@ -119,5 +120,13 @@ for select
 to authenticated
 using (
   bucket_id = 'student-materials'
-  and (storage.foldername(name))[1] = (select auth.uid())::text
+  and (
+    (storage.foldername(name))[1] = (select auth.uid())::text
+    or exists (
+      select 1
+      from public.student_profiles as profile
+      where profile.id = (select auth.uid())
+        and profile.storage_folder = (storage.foldername(name))[1]
+    )
+  )
 );

@@ -9,12 +9,14 @@ import { fileURLToPath } from "node:url";
 const siteRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const read = (relativePath) => readFile(path.join(siteRoot, relativePath), "utf8");
 
-test("首页保留五大考试模块并增加能力成长与资料入口", async () => {
+test("首页聚焦五大考试模块并提供基础补齐与外刊入口", async () => {
   const html = await read("index.html");
   assert.match(html, /id="ability-paths"/);
   assert.match(html, /id="exam-paths"/);
+  assert.match(html, /beginner\.html/);
+  assert.match(html, /reading\.html/);
   assert.match(html, /library\.html/);
-  assert.match(html, /Numberblocks/);
+  assert.doesNotMatch(html, /Numberblocks/);
 });
 
 test("资料目录包含全部朋友分享的系列", async () => {
@@ -29,7 +31,20 @@ test("资料目录包含全部朋友分享的系列", async () => {
 });
 
 test("新增页面引用的本地脚本和样式均存在", async () => {
-  for (const page of ["index.html", "library.html", "practice.html", "module.html", "student/index.html"]) {
+  for (const page of [
+    "index.html",
+    "beginner.html",
+    "zhongkao.html",
+    "gaokao.html",
+    "kaoyan.html",
+    "ielts.html",
+    "toefl.html",
+    "reading.html",
+    "library.html",
+    "practice.html",
+    "module.html",
+    "student/index.html"
+  ]) {
     const html = await read(page);
     const base = path.dirname(path.join(siteRoot, page));
     const references = [...html.matchAll(/(?:src|href)="([^"?#]+)(?:[?#][^"]*)?"/g)]
@@ -39,6 +54,29 @@ test("新增页面引用的本地脚本和样式均存在", async () => {
       assert.ok(existsSync(path.resolve(base, reference)), `${page} 引用不存在：${reference}`);
     });
   }
+});
+
+test("公开专题页具备独立 SEO 信息并进入 sitemap", async () => {
+  const pages = ["beginner", "zhongkao", "gaokao", "kaoyan", "ielts", "toefl", "reading"];
+  const sitemap = await read("sitemap.xml");
+  const robots = await read("robots.txt");
+  assert.match(robots, /Sitemap: https:\/\/dcao1255-ctrl\.github\.io\/english-study-hub\/sitemap\.xml/);
+  for (const page of pages) {
+    const html = await read(`${page}.html`);
+    assert.match(html, /<meta name="description" content="[^"]+"/);
+    assert.match(html, /<meta name="robots" content="index,follow"/);
+    assert.match(html, new RegExp(`<link rel="canonical" href="https://dcao1255-ctrl\\.github\\.io/english-study-hub/${page}\\.html"`));
+    assert.match(sitemap, new RegExp(`/${page}\\.html`));
+  }
+});
+
+test("学生个人空间按课程日期联动能力、错题和笔记且不再显示任务栏", async () => {
+  const source = await read("assets/js/student.js");
+  assert.match(source, /id="lesson-date-filter"/);
+  assert.match(source, /id="ability-diagnosis"/);
+  assert.match(source, /getLessonEntries\(currentProfile\?\.error_book, lessonDate\)/);
+  assert.match(source, /getLessonEntries\(currentProfile\?\.phrase_notes, lessonDate\)/);
+  assert.doesNotMatch(source, /id="tasks-panel"|renderTaskCards|progressByTask/);
 });
 
 test("Supabase 升级脚本启用 RLS 且媒体桶保持私有", async () => {

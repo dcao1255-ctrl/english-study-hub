@@ -7,6 +7,13 @@ begin;
 alter table public.student_profiles
 add column if not exists materials jsonb not null default '[]'::jsonb;
 
+alter table public.student_profiles
+add column if not exists storage_folder text;
+
+create unique index if not exists student_profiles_storage_folder_unique
+on public.student_profiles (storage_folder)
+where storage_folder is not null;
+
 do $$
 begin
   if not exists (
@@ -87,7 +94,15 @@ for select
 to authenticated
 using (
   bucket_id = 'student-materials'
-  and (storage.foldername(name))[1] = (select auth.uid())::text
+  and (
+    (storage.foldername(name))[1] = (select auth.uid())::text
+    or exists (
+      select 1
+      from public.student_profiles as profile
+      where profile.id = (select auth.uid())
+        and profile.storage_folder = (storage.foldername(name))[1]
+    )
+  )
 );
 
 commit;
