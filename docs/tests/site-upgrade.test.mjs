@@ -11,8 +11,11 @@ const read = (relativePath) => readFile(path.join(siteRoot, relativePath), "utf8
 
 test("首页聚焦五大考试模块并提供基础补齐与外刊入口", async () => {
   const html = await read("index.html");
-  assert.match(html, /id="ability-paths"/);
   assert.match(html, /id="exam-paths"/);
+  assert.match(html, /定义你的专属<br \/>英语学习搭子/);
+  assert.doesNotMatch(html, /不追求大而全/);
+  assert.doesNotMatch(html, /id="ability-paths"/);
+  assert.match(html, /资料只为明确任务服务[\s\S]+?进入完整资料库/);
   assert.match(html, /beginner\.html/);
   assert.match(html, /reading\.html/);
   assert.match(html, /library\.html/);
@@ -72,11 +75,31 @@ test("公开专题页具备独立 SEO 信息并进入 sitemap", async () => {
 
 test("学生个人空间按课程日期联动能力、错题和笔记且不再显示任务栏", async () => {
   const source = await read("assets/js/student.js");
-  assert.match(source, /id="lesson-date-filter"/);
+  assert.match(source, /id="lesson-calendar"/);
+  assert.match(source, /calendar-lesson-day/);
   assert.match(source, /id="ability-diagnosis"/);
+  assert.match(source, /asArray\(item\?\.abilities\)\.includes\(dimension\)/);
   assert.match(source, /getLessonEntries\(currentProfile\?\.error_book, lessonDate\)/);
   assert.match(source, /getLessonEntries\(currentProfile\?\.phrase_notes, lessonDate\)/);
   assert.doesNotMatch(source, /id="tasks-panel"|renderTaskCards|progressByTask/);
+});
+
+test("首页学习目标使用四卡横向滑动并提供前后按钮", async () => {
+  const html = await read("index.html");
+  const css = await read("assets/css/site.css");
+  const source = await read("assets/js/home.js");
+  assert.match(html, /id="module-prev"/);
+  assert.match(html, /id="module-next"/);
+  assert.match(css, /grid-auto-columns:\s*calc\(\(100% - 36px\) \/ 4\)/);
+  assert.match(css, /scroll-snap-type:\s*inline mandatory/);
+  assert.match(source, /grid\.scrollBy/);
+});
+
+test("页脚按义务阶段、升学考试和服务咨询分类", async () => {
+  const source = await read("assets/js/site-shell.js");
+  for (const label of ["义务阶段", "幼儿英语", "小学英语", "中考英语", "英语外刊", "升学考试", "高考英语", "考研英语", "雅思备考", "托福备考", "服务与咨询", "个人空间", "官网客服", "反馈建议"]) {
+    assert.match(source, new RegExp(label));
+  }
 });
 
 test("Supabase 升级脚本启用 RLS 且媒体桶保持私有", async () => {

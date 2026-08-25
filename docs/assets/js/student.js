@@ -167,6 +167,63 @@
       </article>`;
   }
 
+  function getLessonMonthKey(lesson) {
+    return getLessonDateKey(lesson).slice(0, 7);
+  }
+
+  function renderLessonCalendar() {
+    const calendar = document.querySelector("#lesson-calendar");
+    if (!calendar || !insightState) return;
+    const monthKey = insightState.months[insightState.monthIndex];
+    if (!monthKey) {
+      calendar.innerHTML = '<div class="lesson-detail-empty">还没有可选择的上课日期。</div>';
+      return;
+    }
+
+    const [year, month] = monthKey.split("-").map(Number);
+    const firstDayOffset = (new Date(year, month - 1, 1).getDay() + 6) % 7;
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const lessonsByDay = new Map();
+    insightState.lessons.forEach((lesson, index) => {
+      if (getLessonMonthKey(lesson) !== monthKey) return;
+      lessonsByDay.set(Number(getLessonDateKey(lesson).slice(8, 10)), { lesson, index });
+    });
+
+    const cells = [];
+    for (let index = 0; index < firstDayOffset; index += 1) {
+      cells.push('<span class="calendar-day calendar-day-empty" aria-hidden="true"></span>');
+    }
+    for (let day = 1; day <= daysInMonth; day += 1) {
+      const entry = lessonsByDay.get(day);
+      if (!entry) {
+        cells.push(`<span class="calendar-day">${day}</span>`);
+        continue;
+      }
+      const selected = entry.index === insightState.selectedLessonIndex;
+      cells.push(`<button class="calendar-day calendar-lesson-day${selected ? " selected" : ""}" type="button" data-lesson-index="${entry.index}" aria-label="选择 ${escapeHtml(entry.lesson.iso_date || entry.lesson.date)} ${escapeHtml(entry.lesson.label || "课堂记录")}" aria-pressed="${selected}">${day}<i aria-hidden="true"></i></button>`);
+    }
+
+    calendar.innerHTML = `
+      <div class="calendar-toolbar">
+        <button type="button" data-calendar-direction="-1" aria-label="查看上一个有课程的月份" ${insightState.monthIndex === 0 ? "disabled" : ""}>←</button>
+        <strong>${year} 年 ${month} 月</strong>
+        <button type="button" data-calendar-direction="1" aria-label="查看下一个有课程的月份" ${insightState.monthIndex === insightState.months.length - 1 ? "disabled" : ""}>→</button>
+      </div>
+      <div class="calendar-weekdays" aria-hidden="true"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div>
+      <div class="lesson-calendar-grid">${cells.join("")}</div>
+      <p class="calendar-legend"><i aria-hidden="true"></i>蓝色日期表示已有课堂记录，点击即可筛选。</p>`;
+
+    calendar.querySelectorAll("[data-lesson-index]").forEach((button) => {
+      button.addEventListener("click", () => selectLesson(Number(button.dataset.lessonIndex)));
+    });
+    calendar.querySelectorAll("[data-calendar-direction]").forEach((button) => {
+      button.addEventListener("click", () => {
+        insightState.monthIndex += Number(button.dataset.calendarDirection);
+        renderLessonCalendar();
+      });
+    });
+  }
+
   function setCanvasSize(canvas, height) {
     const ratio = Math.min(2, window.devicePixelRatio || 1);
     const width = Math.max(260, Math.round(canvas.getBoundingClientRect().width || 320));
@@ -244,6 +301,8 @@
 
   function findAbilityDiagnosis(dimension, lesson) {
     const diagnosis = asArray(lesson?.diagnosis).length ? asArray(lesson.diagnosis) : asArray(currentProfile?.diagnosis);
+    const explicit = diagnosis.find((item) => item?.ability === dimension || asArray(item?.abilities).includes(dimension));
+    if (explicit) return explicit;
     const aliases = {
       "阅读理解": ["阅读"],
       "完形语境": ["完形", "语境"],
@@ -322,8 +381,9 @@
     const hasLessonScores = lesson.ability_scores && typeof lesson.ability_scores === "object" && Object.keys(lesson.ability_scores).length >= 3;
     const radarScores = hasLessonScores ? lesson.ability_scores : insightState.scores;
     insightState.radarScores = radarScores;
-    const dateSelect = document.querySelector("#lesson-date-filter");
-    if (dateSelect) dateSelect.value = String(lessonIndex);
+    const selectedMonthIndex = insightState.months.indexOf(getLessonMonthKey(lesson));
+    if (selectedMonthIndex >= 0) insightState.monthIndex = selectedMonthIndex;
+    renderLessonCalendar();
     const detail = document.querySelector("#lesson-detail");
     if (detail) {
       detail.innerHTML = renderLessonDetail(lesson, lessonIndex);
@@ -351,15 +411,12 @@
     if (!lessons.length) return;
     const selectedLessonIndex = Math.max(0, lessons.length - 1);
     const initialDimension = Object.keys(scores || {})[0] || "阅读理解";
-    insightState = { lessons, scores, radarScores: scores, selectedLessonIndex, dimension: initialDimension };
+    const months = [...new Set(lessons.map(getLessonMonthKey).filter(Boolean))].sort();
+    insightState = { lessons, scores, radarScores: scores, selectedLessonIndex, dimension: initialDimension, months, monthIndex: Math.max(0, months.length - 1) };
     selectLesson(selectedLessonIndex);
 
     document.querySelectorAll("[data-ability-dimension]").forEach((abilityButton) => {
       abilityButton.addEventListener("click", () => updateAbilityDiagnosis(abilityButton.dataset.abilityDimension));
-    });
-
-    document.querySelector("#lesson-date-filter")?.addEventListener("change", (event) => {
-      selectLesson(Number(event.currentTarget.value));
     });
 
     window.removeEventListener("resize", redrawInsightCharts);
@@ -421,12 +478,9 @@
 
         <section class="lesson-filter-section" id="lesson-insights">
           <div class="container lesson-filter-layout">
-            <div class="lesson-date-control">
-              <label for="lesson-date-filter">选择上课日期</label>
-              <select id="lesson-date-filter" ${lessons.length ? "" : "disabled"}>
-                ${lessons.map((lesson, index) => `<option value="${index}" ${index === selectedLessonIndex ? "selected" : ""}>${escapeHtml(lesson.iso_date || lesson.date || `第 ${index + 1} 次课`)} · ${escapeHtml(lesson.label || lesson.title || "课堂记录")}</option>`).join("")}
-              </select>
-              <small>下方能力雷达、错题本和重点笔记会随日期同步切换。</small>
+            <div>
+              <div class="lesson-section-heading lesson-filter-heading"><div><p class="kicker">LESSON CALENDAR · 课程日历</p><h2>选择上课日期</h2></div></div>
+              <div class="lesson-calendar-panel" id="lesson-calendar" aria-label="按上课日期筛选"></div>
             </div>
             <div id="lesson-detail" aria-live="polite">${renderLessonDetail(selectedLesson, selectedLessonIndex)}</div>
           </div>

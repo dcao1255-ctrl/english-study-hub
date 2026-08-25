@@ -68,9 +68,9 @@
       <div class="container footer-inner">
         <div class="footer-about"><strong class="footer-brand">逐光英语</strong><p>面向中学及以上学习者的英语能力提升与升学考试路径。</p></div>
         <nav class="footer-links" aria-label="页脚学习路径">
-          <div><strong>学习起点</strong><a href="${root}beginner.html">英语初学者</a><a href="${root}zhongkao.html">中考英语</a><a href="${root}gaokao.html">高考英语</a></div>
-          <div><strong>升学考试</strong><a href="${root}kaoyan.html">考研英语</a><a href="${root}ielts.html">雅思备考</a><a href="${root}toefl.html">托福备考</a></div>
-          <div><strong>阅读与服务</strong><a href="${root}reading.html">英语外刊推荐</a><a href="${root}library.html">精选资料目录</a><a href="${root}student/">学生个人空间</a></div>
+          <div><strong>义务阶段</strong><a href="${root}beginner.html#preschool">幼儿英语</a><a href="${root}beginner.html#primary">小学英语</a><a href="${root}zhongkao.html">中考英语</a><a href="${root}reading.html">英语外刊</a></div>
+          <div><strong>升学考试</strong><a href="${root}gaokao.html">高考英语</a><a href="${root}kaoyan.html">考研英语</a><a href="${root}ielts.html">雅思备考</a><a href="${root}toefl.html">托福备考</a></div>
+          <div><strong>服务与咨询</strong><a href="${root}student/">个人空间</a><a href="https://github.com/dcao1255-ctrl/english-study-hub" target="_blank" rel="noreferrer">官网客服</a><a href="https://github.com/dcao1255-ctrl/english-study-hub/issues/new" target="_blank" rel="noreferrer">反馈建议</a></div>
         </nav>
       </div>`;
   }

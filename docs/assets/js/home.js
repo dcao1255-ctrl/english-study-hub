@@ -16,4 +16,21 @@
         <a class="official-link" href="${module.source.url}" target="_blank" rel="noreferrer" aria-label="前往${module.name}官网信息">官网直达 ↗</a>
       </div>
     </article>`).join("");
+
+  const previousButton = document.querySelector("#module-prev");
+  const nextButton = document.querySelector("#module-next");
+  const updateControls = () => {
+    const maxScroll = Math.max(0, grid.scrollWidth - grid.clientWidth);
+    if (previousButton) previousButton.disabled = grid.scrollLeft <= 2;
+    if (nextButton) nextButton.disabled = grid.scrollLeft >= maxScroll - 2;
+  };
+  const scrollModules = (direction) => {
+    grid.scrollBy({ left: direction * grid.clientWidth, behavior: "smooth" });
+  };
+
+  previousButton?.addEventListener("click", () => scrollModules(-1));
+  nextButton?.addEventListener("click", () => scrollModules(1));
+  grid.addEventListener("scroll", updateControls, { passive: true });
+  window.addEventListener("resize", updateControls);
+  updateControls();
 })();
